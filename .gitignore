@@ -1,2 +1,3 @@
 *.eggs
 *.egg-info
+yaket/schema/__pycache__/
