@@ -1,0 +1,32 @@
+autolog: False
+optimizer: Adam # SGOptimizer
+optimizer_params:
+    learning_rate: 0.01
+# metrics:
+# - Accuracy
+batch_size: 128 
+loss: CategoricalCrossentropy 
+# callbacks:
+#     # - EarlyStopping:
+#     #     monitor: val_loss 
+#     #     patience: 10
+#     #     mode: min
+#     #     verbose: 1
+#     # - ReduceLROnPlateau:
+#     #     monitor: val_loss
+#     #     mode: min
+#     #     patience: 5
+#     #     verbose: 1
+#     - ModelCheckpoint:
+#         monitor: val_accuracy
+#         mode: max
+#         verbose: 1
+#         save_best_only: True
+#         save_weights_only: True
+#         filepath: '/tmp/checkpoint'
+        
+verbose: 2 # 0, 1, 2 
+epochs: 15
+shuffle: False
+class_weights: # First value is boolean
+    - False
