@@ -14,6 +14,7 @@ from pydantic import (
     Field,
 )
 
+
 class TrainingModel(BaseModel, extra=Extra.allow):
     autolog: bool
     optimizer: constr(strict=True)
@@ -27,18 +28,17 @@ class TrainingModel(BaseModel, extra=Extra.allow):
     shuffle: bool
     class_weights: conlist(item_type=Any, min_items=1)
 
-def yaml_to_pydantic(path: str) ->  TrainingModel:
+
+def yaml_to_pydantic(path: str, validate: bool) -> TrainingModel:
     if not os.path.exists(path=path):
         raise FileNotFoundError(f"{path} not found")
     if os.path.isfile(path) and path.endswith(".yaml"):
         with open(path, "r") as f:
             data = yaml.safe_load(f, Loader=yaml.FullLoader)
-        return TrainingModel(**data)
+        return (
+            TrainingModel(**data)
+            if validate
+            else TrainingModel.construct(_fields_set=None, **data)
+        )
     else:
         raise ValueError(f"{path} is not a yaml file")
-        
-
-
-
-
-        

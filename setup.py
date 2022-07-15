@@ -8,6 +8,6 @@ setup(name = 'yaket',
       url = '',
       packages = find_packages(include = ['yaket', 'yaket.*']),
       setup_requires = ['flake8'],
-      install_requires=['pydantic','pyyaml'],
+      install_requires=['pydantic','pyyaml','mlflow'],
       extras_require = {"tensorflow": ["tensorflow>=2.4"]},
       )
