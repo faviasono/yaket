@@ -1,5 +1,6 @@
-from pydantic_yaml import YamlModel
 from typing import Dict, Optional, Any
+import yaml
+import os
 from pydantic import (
     BaseModel,
     validator,
@@ -13,12 +14,7 @@ from pydantic import (
     Field,
 )
 
-
-#pydantic-yaml-0.8.0
-
-
-
-class Training(BaseModel, extra=Extra.allow):
+class TrainingModel(BaseModel, extra=Extra.allow):
     autolog: bool
     optimizer: constr(strict=True)
     optimizer_params: Optional[Dict[str, Any]] = None
@@ -31,5 +27,18 @@ class Training(BaseModel, extra=Extra.allow):
     shuffle: bool
     class_weights: conlist(item_type=Any, min_items=1)
 
-class TrainerModel(YamlModel, extra=Extra.allow):
-    training: Training = Field(...)
+def yaml_to_pydantic(path: str) ->  TrainingModel:
+    if not os.path.exists(path=path):
+        raise FileNotFoundError(f"{path} not found")
+    if os.path.isfile(path) and path.endswith(".yaml"):
+        with open(path, "r") as f:
+            data = yaml.safe_load(f, Loader=yaml.FullLoader)
+        return TrainingModel(**data)
+    else:
+        raise ValueError(f"{path} is not a yaml file")
+        
+
+
+
+
+        
