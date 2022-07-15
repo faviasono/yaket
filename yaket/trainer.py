@@ -30,6 +30,8 @@ class Trainer:
     _history: Dict[str, Any] = None
 
     def _init_trainer(self) -> None:
+        """Initialize the trainer
+        TODO: Add checks + exceptions"""
         self._config = self._parse_config()
         self._validate_config_file()
         if self.custom_modules_path:
