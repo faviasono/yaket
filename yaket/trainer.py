@@ -68,29 +68,28 @@ class Trainer:
 
     
 
-    def train(self):
-        """Train the model. Main function to call
+    def train(self, epochs: int = None):
+        """Train the model. Main function to call.
         
-        TODO: 
-        1. Clone the model within tf.distributed.strategy()
-        2. Input of GeneratorDatasetOp::Dataset will not be optimize. Check tf.data with strategy
-
+        Args
+        ----
+        epochs: int, optional
+            Number of epochs to train. If None, will train with the number of epochs specified in the config file.
+        
         """
+
         self._init_trainer()
         self._autolog()
 
-        train_dataset = self._get_x_y_train()  # handle the format of the dataset
-        val_dataset = self._get_x_y_val()
-        
         strategy = self._get_strategy()
-
+        batch_size = strategy.num_replicas_in_sync*self.config.batch_size
+        train_dataset = self._get_x_y_train(batch_size) 
+        val_dataset = self._get_x_y_val(batch_size)
+        
         with strategy.scope():
 
-            self._clone_model()
+            if self.strategy is None: self._clone_model() 
             self._compile_model()
-
-            train_dataset = strategy.experimental_distribute_dataset(train_dataset)
-            val_dataset = strategy.experimental_distribute_dataset(val_dataset)
 
             history = self.model.fit(
                 x=train_dataset,
@@ -137,29 +136,38 @@ class Trainer:
             t = int(time.time())
             self.model.save(os.getcwd()+f"/models/{t}_best_model")
     def _clone_model(self):
-        """Clone the model so that it works within tf.distribute.Strategy"""
+        """Clone the model so that it works within tf.distribute.Strategy
+            It works only for models not using custom objects
+        """
         self.model = tf.keras.models.clone_model(self.model)
 
 
-    def _get_x_y_val(self):
+    def _get_x_y_val(self, batch_size):
         """Get the x and y for training based on the format of the dataset"""
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+
         if self.val_dataset is None:
             return None
         if isinstance(self.val_dataset, tf.data.Dataset):
             return self.val_dataset
         else:
-            val = tf.data.Dataset.from_tensor_slices(self.val_dataset).batch(1)
+            val = tf.data.Dataset.from_tensor_slices(self.val_dataset)\
+                .batch(batch_size).with_options(options)
             return val
 
-    def _get_x_y_train(self):
+    def _get_x_y_train(self, batch_size):
         """Get the x and y for training based on the format of the dataset"""
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+    
         if isinstance(self.train_dataset, tf.data.Dataset):
             x = self.train_dataset
         else:
             x = tf.data.Dataset.from_tensor_slices(self.train_dataset)
             if self.config.shuffle:
                 x = x.shuffle(self.train_dataset[0].shape[0])
-            x = x.batch(self.config.batch_size).prefetch(1)
+            x = x.batch(batch_size).prefetch(1).with_options(options)
         return x
 
     @property
