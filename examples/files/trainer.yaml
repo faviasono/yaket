@@ -30,3 +30,4 @@ epochs: 15
 shuffle: False
 class_weights: # First value is boolean
     - False
+accelerator: cpu #Make it optional

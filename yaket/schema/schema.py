@@ -13,6 +13,17 @@ from pydantic import (
     DirectoryPath,
     Field,
 )
+from enum import Enum, auto
+
+
+class Accelerator(Enum):
+    cpu = auto()
+    gpu = auto()
+    mgpu = auto()
+    tpu = auto()
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.name, cls))
 
 
 class TrainingModel(BaseModel, extra=Extra.allow):
@@ -28,6 +39,15 @@ class TrainingModel(BaseModel, extra=Extra.allow):
     verbose: conint(ge=1, le=2)
     shuffle: bool
     class_weights: Optional[conlist(item_type=Any, min_items=1)]
+    accelerator: Optional[constr(strict=True)] 
+
+    @validator('accelerator')
+    def accelerator_validator(cls, v):
+        if v is None:
+            return None
+        if v not in Accelerator.list():
+            raise ValueError(f'{v} is not a valid accelerator.\nPlease use: {Accelerator.list()}')
+        return v
 
 
 def yaml_to_pydantic(path: str, validate: bool) -> TrainingModel:

@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from enum import Enum, auto
+
 from typing import List, Optional, Tuple, Union, Any, Dict, Callable
 import numpy as np
 import tensorflow as tf
 import gc
-from yaket.schema.schema import TrainingModel, yaml_to_pydantic
+from yaket.schema.schema import TrainingModel, yaml_to_pydantic, Accelerator
 import importlib
 import mlflow
 import os
@@ -20,6 +22,7 @@ class Trainer:
     random_seed: int = 1234
     validate_yaml: bool = True
     custom_modules_path: Optional[str] = None
+
     
 
     # internals
@@ -32,41 +35,65 @@ class Trainer:
     _custom_module: Callable = None
     _history: Dict[str, Any] = None
     _model_checkpoint: Optional[str] = None
+    _accelerator: Optional[Accelerator] = None
     
 
     def _init_trainer(self) -> None:
-        """Initialize the trainer
-        TODO: Add checks + exceptions"""
+        """Initialize the trainer"""
+
+        if not isinstance(self.model, tf.keras.models.Model):
+            raise Exception('model must be keras model')
+        if not isinstance(self.config_path,str) or not os.path.isfile(self.config_path):
+            raise Exception('Config path must be a valid file path')
+        if self.strategy is not None and not isinstance(self.strategy, tf.distribute.Strategy):
+            raise Exception("Strategy must be keras strategy object")
+        if not isinstance(self.random_seed, int):
+            raise Exception("Random seed must be an integer")
+        if not isinstance(self.validate_yaml, bool):
+            raise Exception("Validate yaml must be a boolean value")
+        if self.custom_modules_path is not None:
+            if not isinstance(self.custom_modules_path, str) or not os.path.isfile(self.custom_modules_path):
+                raise Exception("Costum modules path must be a valid path string")
+
+        
         self._config = self._parse_config()
+        self._accelerator = Accelerator[self.config.accelerator]
         self._validate_config_file()
         if self.custom_modules_path:
             self._import_custom_model(self.custom_modules_path)
         self._callbacks = self._get_callbacks()
         self._input_shape = self._get_input_shape()
 
+    
+
     def train(self):
         """Train the model. Main function to call
         
         TODO: 
-        2. Add tf.distribute.Strategy
+        1. Clone the model within tf.distributed.strategy()
+        2. Input of GeneratorDatasetOp::Dataset will not be optimize. Check tf.data with strategy
+
         """
         self._init_trainer()
-        self._compile_model()
         self._autolog()
 
         x, y, batch_size = self._get_x_y_train()  # handle the format of the dataset
         val_dataset = self._get_x_y_val()
+        
+        strategy = self._get_strategy()
+        with strategy.scope():
 
-        history = self.model.fit(
-            x=x,
-            y=y,
-            epochs=int(self.config.epochs),
-            validation_data=val_dataset,
-            batch_size=batch_size,
-            callbacks=self._callbacks,
-            class_weight=None, #TODO: add class_weight,
-            verbose=int(self.config.verbose),
-        )
+            self._compile_model()
+            history = self.model.fit(
+                x=x,
+                y=y,
+                epochs=int(self.config.epochs),
+                validation_data=val_dataset,
+                batch_size=batch_size,
+                callbacks=self._callbacks,
+                class_weight=None, #TODO: add class_weight,
+                verbose=int(self.config.verbose),
+            )
 
 
         self._save_model()
@@ -131,13 +158,30 @@ class Trainer:
 
     def _compile_model(self) -> None:
         """Compile the model"""
+
+        self._optimizer = self._get_optimizer()
+        self._loss = self._get_loss()
+        self._metrics = self._get_metrics()
+        
         self.model.compile(
             optimizer=self._optimizer, loss=self._loss, metrics=self._get_metrics()
         )
 
     def _get_strategy(self):
         if self.strategy is None:
-            return tf.distribute.MirroredStrategy()
+            #TODO: fix here with accelarator as paramter
+            if self._accelerator is None:
+                return 
+            
+            if self._accelerator is Accelerator.cpu:
+                index = 0 #TODO: take freer gpu (._get_best_gpu())
+                return tf.distribute.OneDeviceStrategy(f"/gpu:{index}")
+            if self._accelerator is Accelerator.gpu or self._accelerator is Accelerator.mgpu:
+                # If GPUs are not available, it will use CPUs
+                return tf.distribute.MirroredStrategy()
+            if self._accelerator is Accelerator.tpu:
+                #TODO: check configuration for tpu strategy
+                return tf.distribute.TPUStrategy()
         else:
             return self.strategy
 
@@ -147,9 +191,9 @@ class Trainer:
     def _validate_config_file(self):
         "Validate existence of the loss, optimizer and callbacks defined in the config file"
         try:
-            self._optimizer = self._get_optimizer()
-            self._metrics = self._get_metrics()
-            self._loss = self._get_loss()
+            self._get_optimizer()
+            self._get_metrics()
+            self._get_loss()
         except Exception as e:
             raise TypeError(
                 f"You are using a module not defined in either keras or in the custom script\n Details: {e}"
@@ -252,7 +296,7 @@ class Trainer:
         tf.keras.backend.clear_session()
 
     def _autolog(self) -> None:
-        """Autolog the model"""
+        """Autolog the model using MLFlow"""
         if self.config.autolog:
             mlflow.tensorflow.autolog(log_models=True, disable=False)
 
@@ -308,24 +352,27 @@ if __name__ == '__main__':
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
-
-    model = keras.Sequential(
-    [
-        keras.Input(shape=input_shape),
-        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Flatten(),
-        layers.Dropout(0.5),
-        layers.Dense(num_classes, activation="softmax"),
-    ]
-    )
+    strategy = tf.distribute.MirroredStrategy()
+    with strategy.scope():
+        model = keras.Sequential(
+        [
+            keras.Input(shape=input_shape),
+            layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Flatten(),
+            layers.Dropout(0.5),
+            layers.Dense(num_classes, activation="softmax"),
+        ]
+        )
 
     model.summary()
 
+    
 
     path = '/root/project/yaket/examples/files/trainer.yaml'
     
-    trainer = Trainer(config_path = path, train_dataset=(x_train, y_train), val_dataset=(x_test, y_test), model=model)
+    trainer = Trainer(config_path = path, train_dataset=(x_train, y_train), val_dataset=(x_test, y_test), \
+            model=model, strategy=strategy)
     trainer.train()
