@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple, Union
 import yaml
 import os
 from pydantic import (
@@ -27,18 +27,17 @@ class Accelerator(Enum):
 
 
 class TrainingModel(BaseModel, extra=Extra.allow):
-    autolog: bool
-    optimizer: constr(strict=True)
+    autolog: bool = False
+    optimizer: constr(strict=True) = 'Adam'
     optimizer_params: Optional[Dict[str, Any]] = None
-    
-    epochs: PositiveInt
-    batch_size: PositiveInt  # if format is numpy
+    epochs: PositiveInt = 1
+    batch_size: PositiveInt = 1  # if format is numpy
     loss: constr(strict=True)
-    callbacks: Optional[conlist(item_type=Dict[str, Any], min_items=0)] 
-    metrics: Optional[conlist(item_type=str, min_items=1, unique_items=True)]
-    verbose: conint(ge=1, le=2)
-    shuffle: bool
-    class_weights: Optional[conlist(item_type=Any, min_items=1)]
+    callbacks: Optional[conlist(item_type=Union[str,Dict[str, Any]], min_items=0)] 
+    metrics: Optional[conlist(item_type=Union[str,Dict], min_items=1, unique_items=True)]
+    verbose: conint(ge=1, le=2) = 1
+    shuffle: bool = True
+    class_weights: Optional[conlist(item_type=Any, min_items=1)] 
     accelerator: Optional[constr(strict=True)] 
 
     @validator('accelerator')

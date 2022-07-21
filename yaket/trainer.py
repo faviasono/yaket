@@ -38,6 +38,7 @@ class Trainer:
     _history: Dict[str, Any] = None
     _model_checkpoint: Optional[str] = None
     _accelerator: Optional[Accelerator] = None
+    _log:bool = False
     
 
     def _init_trainer(self) -> None:
@@ -121,7 +122,7 @@ class Trainer:
         """Save the model by loading best checkpoint if available and saving it to mlflow or local path"""
         if self._model_checkpoint is not None:
             self.model.load_weights(self._model_checkpoint)
-            if self._autolog:
+            if self._log:
                 self.model.save('/tmp/best_model')
                 run = mlflow.last_active_run()
                 idx = 7 #TODO: check is always the same
@@ -275,15 +276,20 @@ class Trainer:
         default_value = "not_found"
 
         for name_callback in self.config.callbacks:
-            key = list(name_callback.keys())[0]
-            args = list(name_callback.values())[0]
+            if isinstance(name_callback, Dict):
+                key = list(name_callback.keys())[0]
+                args = list(name_callback.values())[0]
 
-            # Track filepath if it's a ModelCheckpoint
-            self._model_checkpoint =args['filepath'] if key == 'ModelCheckpoint' else None
+                # Track filepath if it's a ModelCheckpoint
+                self._model_checkpoint =args['filepath'] if key == 'ModelCheckpoint' else None
 
-            callback_value = getattr(tf.keras.callbacks, key, default_value)
+                callback_value = getattr(tf.keras.callbacks, key, default_value)
+            else:
+                callback_value = getattr(tf.keras.callbacks, name_callback, default_value)
+                args = None
+
             if callback_value != default_value:
-                callbacks.append(callback_value(**args))
+                callbacks.append(callback_value(**args) if args is not None else callback_value())
             else:
                 callbacks.append(self._load_custom_module(key, args))
 
@@ -299,11 +305,17 @@ class Trainer:
         for metric in self.config.metrics:
             if metric is None:
                 continue
-            metric_value = getattr(tf.keras.metrics, f"{metric}", default_value)
-            if metric_value != default_value:
-                list_metrics.append(metric_value())
+            if isinstance(metric,str):   
+                args = None
+                metric_value = getattr(tf.keras.metrics, f"{metric}", default_value)()
             else:
-                list_metrics.append(self._load_custom_module(metric))
+                m, args = list(metric.items())[0]
+                metric_value = getattr(tf.keras.metrics, f"{m}", default_value)(**args)
+            
+            if metric_value != default_value:
+                list_metrics.append(metric_value)
+            else:
+                list_metrics.append(self._load_custom_module(metric, args))
         return list_metrics
 
     @staticmethod
@@ -326,6 +338,7 @@ class Trainer:
         """Autolog the model using MLFlow"""
         if self.config.autolog:
             mlflow.tensorflow.autolog(log_models=True, disable=False)
+            self._log = True
 
     def _set_randomness(self, random_seed: Optional[int] = None) -> None:
         """Set the randomness"""
