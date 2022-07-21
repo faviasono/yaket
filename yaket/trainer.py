@@ -10,6 +10,8 @@ import importlib
 import mlflow
 import os
 import time
+import subprocess as sp
+
 
 
 @dataclass
@@ -77,19 +79,25 @@ class Trainer:
         self._init_trainer()
         self._autolog()
 
-        x, y, batch_size = self._get_x_y_train()  # handle the format of the dataset
+        train_dataset = self._get_x_y_train()  # handle the format of the dataset
         val_dataset = self._get_x_y_val()
         
         strategy = self._get_strategy()
+
         with strategy.scope():
 
+            self._clone_model()
             self._compile_model()
+
+            train_dataset = strategy.experimental_distribute_dataset(train_dataset)
+            val_dataset = strategy.experimental_distribute_dataset(val_dataset)
+
             history = self.model.fit(
-                x=x,
-                y=y,
+                x=train_dataset,
+                y=None,
                 epochs=int(self.config.epochs),
                 validation_data=val_dataset,
-                batch_size=batch_size,
+                batch_size=None,
                 callbacks=self._callbacks,
                 class_weight=None, #TODO: add class_weight,
                 verbose=int(self.config.verbose),
@@ -128,6 +136,9 @@ class Trainer:
             os.makedirs(os.getcwd()+'/models', exist_ok=True)
             t = int(time.time())
             self.model.save(os.getcwd()+f"/models/{t}_best_model")
+    def _clone_model(self):
+        """Clone the model so that it works within tf.distribute.Strategy"""
+        self.model = tf.keras.models.clone_model(self.model)
 
 
     def _get_x_y_val(self):
@@ -142,7 +153,6 @@ class Trainer:
 
     def _get_x_y_train(self):
         """Get the x and y for training based on the format of the dataset"""
-        y, batch_size = None, None
         if isinstance(self.train_dataset, tf.data.Dataset):
             x = self.train_dataset
         else:
@@ -150,7 +160,7 @@ class Trainer:
             if self.config.shuffle:
                 x = x.shuffle(self.train_dataset[0].shape[0])
             x = x.batch(self.config.batch_size).prefetch(1)
-        return x, y, batch_size
+        return x
 
     @property
     def config(self):
@@ -169,14 +179,12 @@ class Trainer:
 
     def _get_strategy(self):
         if self.strategy is None:
-            #TODO: fix here with accelarator as paramter
-            if self._accelerator is None:
-                return 
-            
-            if self._accelerator is Accelerator.cpu:
-                index = 0 #TODO: take freer gpu (._get_best_gpu())
+            if self._accelerator is None :
+                return tf.distribute.MirroredStrategy()
+            if self._accelerator is Accelerator.gpu:
+                index = Trainer.get_free_gpu_idx()
                 return tf.distribute.OneDeviceStrategy(f"/gpu:{index}")
-            if self._accelerator is Accelerator.gpu or self._accelerator is Accelerator.mgpu:
+            if self._accelerator is Accelerator.cpu or self._accelerator is Accelerator.mgpu:
                 # If GPUs are not available, it will use CPUs
                 return tf.distribute.MirroredStrategy()
             if self._accelerator is Accelerator.tpu:
@@ -184,6 +192,17 @@ class Trainer:
                 return tf.distribute.TPUStrategy()
         else:
             return self.strategy
+    
+    @staticmethod
+    def get_free_gpu_idx():
+        """Get the index of the freer GPU"""
+        command = "nvidia-smi --query-gpu=memory.free --format=csv"
+        memory_free_info = (
+            sp.check_output(command.split()).decode("ascii").split("\n")[:-1][1:]
+        )
+        memory_free_values = [int(x.split()[0]) for i, x in enumerate(memory_free_info)]
+        return int(np.argmin(memory_free_values))
+
 
     def _parse_config(self) -> Any:
         return yaml_to_pydantic(self.config_path, self.validate_yaml)
