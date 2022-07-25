@@ -11,8 +11,7 @@ callbacks:
         mode: min
         patience: 5
     - CallbackEval:
-        dataset: valdidation # custom callbacks that require dataset you need this key:value pair
-    
+        dataset: valdidation # custom callbacks that require dataset you need this key:value pair    
 verbose: 1 # 0, 1, 2 
 epochs: 1
 # shuffle: False

@@ -25,7 +25,6 @@ class Trainer:
     validate_yaml: bool = True
     custom_modules_path: Optional[str] = None
 
-    
 
     # internals
     _config: TrainingModel = None
@@ -136,6 +135,7 @@ class Trainer:
             os.makedirs(os.getcwd()+'/models', exist_ok=True)
             t = int(time.time())
             self.model.save(os.getcwd()+f"/models/{t}_best_model")
+    
     def _clone_model(self):
         """Clone the model so that it works within tf.distribute.Strategy
             It works only for models not using custom objects
