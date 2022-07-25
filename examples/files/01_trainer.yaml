@@ -1,0 +1,20 @@
+autolog: False
+# optimizer: Adam # SGOptimizer
+optimizer_params:
+    learning_rate: 0.01
+batch_size: 128 
+loss: CTCLoss 
+callbacks:
+    - EarlyStopping
+    - ReduceLROnPlateau:
+        monitor: val_loss
+        mode: min
+        patience: 5
+    - CallbackEval:
+        dataset: valdidation # custom callbacks that require dataset you need this key:value pair    
+verbose: 1 # 0, 1, 2 
+epochs: 1
+# shuffle: False
+class_weights: # First value is boolean
+    - False
+accelerator: cpu #Make it optional
