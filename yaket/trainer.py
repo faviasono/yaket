@@ -11,7 +11,7 @@ import mlflow
 import os
 import time
 import subprocess as sp
-
+import sys
 
 
 @dataclass
@@ -58,12 +58,12 @@ class Trainer:
             if not isinstance(self.custom_modules_path, str) or not os.path.isfile(self.custom_modules_path):
                 raise Exception("Costum modules path must be a valid path string")
 
-        
+        if self.custom_modules_path:
+            self._import_custom_model(self.custom_modules_path)
         self._config = self._parse_config()
         self._accelerator = Accelerator[self.config.accelerator]
         self._validate_config_file()
-        if self.custom_modules_path:
-            self._import_custom_model(self.custom_modules_path)
+
         self._callbacks = self._get_callbacks()
         self._input_shape = self._get_input_shape()
 
@@ -95,7 +95,7 @@ class Trainer:
             history = self.model.fit(
                 x=train_dataset,
                 y=None,
-                epochs=int(self.config.epochs),
+                epochs=int(self.config.epochs) if epochs is None else epochs,
                 validation_data=val_dataset,
                 batch_size=None,
                 callbacks=self._callbacks,
@@ -229,7 +229,10 @@ class Trainer:
 
     def _import_custom_model(self, module_name: str):
         try:
-            self._custom_module = importlib.import_module(module_name)
+            custom_dirpath = os.path.dirname(module_name)
+            sys.path.append(custom_dirpath)
+            module = module_name.split('/')[-1].split('.')[0]
+            self._custom_module = importlib.import_module(module)
         except Exception as e:
             raise ImportError(f"Error importing {module_name}: {e}")
 
@@ -291,7 +294,13 @@ class Trainer:
             if callback_value != default_value:
                 callbacks.append(callback_value(**args) if args is not None else callback_value())
             else:
-                callbacks.append(self._load_custom_module(key, args))
+                if args is not None:
+                    if args.get('dataset') is not None:
+                        dataset = self.val_dataset if args['dataset'] in ['val','dev','validation'] else self.train_dataset
+                        args['dataset'] = dataset
+                    callbacks.append(self._load_custom_module(key, args))
+                else:
+                    callbacks.append(self._load_custom_module(name_callback, args))
 
         return callbacks
 
