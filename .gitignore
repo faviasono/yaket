@@ -11,3 +11,5 @@ yaket/converter/__pycache__/
 *.onnx
 *.pb
 *.tflite
+examples/~/
+~/

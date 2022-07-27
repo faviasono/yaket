@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+from optparse import OptionParser
 
 from typing import List, Optional, Tuple, Union, Any, Dict, Callable
 import numpy as np
@@ -72,6 +73,23 @@ class Trainer:
         self._callbacks = self._get_callbacks()
         self._input_shape = self._get_input_shape()
 
+    def _train(self, train_dataset, val_dataset, epochs: int = None):
+        """Train the model"""
+
+        self._compile_model()
+        history = self.model.fit(
+            x=train_dataset,
+            y=None,
+            epochs=int(self.config.epochs) if epochs is None else epochs,
+            validation_data=val_dataset,
+            batch_size=None,
+            callbacks=self._callbacks,
+            steps_per_epoch=int(self.config.steps_per_epoch),
+            class_weight=None,  # TODO: add class_weight,
+            verbose=int(self.config.verbose),
+        )
+        return history
+
     def train(self, epochs: int = None):
         """Train the model. Main function to call.
 
@@ -85,27 +103,17 @@ class Trainer:
         self._init_trainer()
         self._autolog()
 
-        strategy = self._get_strategy()
-        batch_size = strategy.num_replicas_in_sync * self.config.batch_size
-        train_dataset = self._get_x_y_train(batch_size)
-        val_dataset = self._get_x_y_val(batch_size)
-
-        with strategy.scope():
-
-            if self.strategy is None:
-                self._clone_model()
-            self._compile_model()
-
-            history = self.model.fit(
-                x=train_dataset,
-                y=None,
-                epochs=int(self.config.epochs) if epochs is None else epochs,
-                validation_data=val_dataset,
-                batch_size=None,
-                callbacks=self._callbacks,
-                class_weight=None,  # TODO: add class_weight,
-                verbose=int(self.config.verbose),
-            )
+        if self.strategy is None and self.config.accelerator is Accelerator.cpu:
+            train_dataset = self._get_x_y_train(self.config.batch_size)
+            val_dataset = self._get_x_y_val(self.config.batch_size)
+            history = self._train(train_dataset, val_dataset, epochs)
+        else:
+            strategy = self._get_strategy()
+            batch_size = strategy.num_replicas_in_sync * self.config.batch_size
+            train_dataset = self._get_x_y_train(batch_size)
+            val_dataset = self._get_x_y_val(batch_size)
+            with strategy.scope():
+                history = self._train(train_dataset, val_dataset, epochs)
 
         self._save_model()
         self._history = history.history
@@ -302,27 +310,64 @@ class Trainer:
 
     def _get_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Get the optimizer from the config file"""
-        opt_pars = self.config.optimizer_params
         default_value = "not_found"
-        optimizer = getattr(
+        opt_pars = dict()
+        opt = self.config.optimizer
+        if isinstance(opt, List):
+            if len(opt) == 1 and isinstance(opt[0], Dict):
+                k = list(opt[1].keys())[0]
+                v = list(opt[1].values())[0]
+                scheduler = getattr(tf.keras.optimizers, k, default_value)
+                if optimizer != default_value:
+                    return optimizer(**opt_pars)
+                else:
+                    return self._load_custom_module(optimizer, opt_pars)
+            else:
+                opt_name = opt[0]
+                optimizer = getattr(
+                    tf.keras.optimizers, f"{opt_name}", default_value
+                )
+                if optimizer == default_value:
+                    optimizer = self._load_custom_module(optimizer)
+                if isinstance(opt[1], dict):
+                    k = list(opt[1].keys())[0]
+                    v = list(opt[1].values())[0]
+                    scheduler = getattr(tf.keras.optimizers.schedules, k, default_value)
+                    if scheduler == default_value:
+                        raise ValueError(f"{v} is not a valid scheduler. Only available from keras")
+                    else:
+                        opt_pars['learning_rate'] = scheduler(**v)
+                        return optimizer(**opt_pars)
+        elif isinstance(opt, str):
+            optimizer = getattr(
             tf.keras.optimizers, f"{self.config.optimizer}", default_value
-        )
-        if optimizer != default_value:
-            return optimizer(**opt_pars)
-        else:
-            return self._load_custom_module(optimizer, opt_pars)
+            )
+            if optimizer != default_value:
+                return optimizer(**opt_pars)
+            else:
+                    return self._load_custom_module(optimizer, opt_pars)
 
     def _get_loss(self) -> Union[tf.keras.losses.Loss, Callable]:
         """Get the loss from the config file"""
 
-        loss_name = self.config.loss
+        loss_config = self.config.loss
         default_value = "not_found"
 
-        loss = getattr(tf.keras.losses, loss_name, default_value)
-        if loss != default_value:
-            return loss()
-        else:  # it's a custom loss
-            return self._load_custom_module(loss_name)
+        if isinstance(loss_config, str):
+            loss = getattr(tf.keras.losses, loss_config, default_value)
+            if loss != default_value:
+                return loss()
+            else:  # it's a custom loss
+                return self._load_custom_module(loss_config)
+        elif isinstance(loss_config, Dict):
+            loss_name = list(loss_config.keys())[0]
+            loss_params = list(loss_config.values())[0]
+            loss = getattr(tf.keras.losses, loss_name, default_value)
+            if loss != default_value:
+                return loss(**loss_params)
+            else:
+                return self._load_custom_module(loss_config, loss_params)
+
 
     def _get_callbacks(self) -> List[tf.keras.callbacks.Callback]:
         """Get the callbacks from the config file"""

@@ -39,7 +39,6 @@ class Converter:
         "Function to convert a keras model to onnx using command line"
         # submit command to command line
 
-        
         if not self.out_path.endswith(".onnx"):
             self.out_path = self.out_path + ".onnx"
         try:
