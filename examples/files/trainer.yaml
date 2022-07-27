@@ -15,8 +15,6 @@ callbacks:
         monitor: val_loss
         mode: min
         patience: 5
-    - CallbackEval:
-        dataset: valdidation
     # #     verbose: 1
     # - ModelCheckpoint:
     #     monitor: val_accuracy

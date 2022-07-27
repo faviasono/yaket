@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any, Tuple, Union
+from typing import Dict, Optional, Any, Tuple, Union, List
 import yaml
 import os
 from pydantic import (
@@ -24,21 +24,26 @@ class Accelerator(Enum):
     @classmethod
     def list(cls):
         return list(map(lambda c: c.name, cls))
+    @classmethod
+    def list_gpu(cls):
+        return list(map(lambda c: c.name if 'gpu' in c.name else '', cls))
+
 
 
 class TrainingModel(BaseModel, extra=Extra.allow):
     autolog: bool = False
-    optimizer: constr(strict=True) = 'Adam'
+    optimizer: Union[constr(strict=True), conlist(item_type=Any,min_items = 1, max_items = 2)] = 'Adam'
     optimizer_params: Optional[Dict[str, Any]] = None
     epochs: PositiveInt = 1
     batch_size: PositiveInt = 1  # if format is numpy
-    loss: constr(strict=True)
+    loss: Union[constr(strict=True), Dict[str, Any]]
     callbacks: Optional[conlist(item_type=Union[str,Dict[str, Any]], min_items=0)] 
     metrics: Optional[conlist(item_type=Union[str,Dict], min_items=1, unique_items=True)]
     verbose: conint(ge=1, le=2) = 1
     shuffle: bool = True
     class_weights: Optional[conlist(item_type=Any, min_items=1)] 
     accelerator: Optional[constr(strict=True)] 
+    steps_per_epoch: Optional[PositiveInt] = None
 
     @validator('accelerator')
     def accelerator_validator(cls, v):
@@ -46,6 +51,8 @@ class TrainingModel(BaseModel, extra=Extra.allow):
             return None
         if v not in Accelerator.list():
             raise ValueError(f'{v} is not a valid accelerator.\nPlease use: {Accelerator.list()}')
+        if v in Accelerator.list_gpu() and not os.environ.get('CUDA_VISIBLE_DEVICES'):
+            raise ValueError('ERROR: No GPU has been detected. Change accelerator.')
         return v
 
 

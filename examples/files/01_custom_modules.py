@@ -3,6 +3,8 @@ import tensorflow as tf
 from tensorflow import keras
 from jiwer import wer
 
+
+########################################################## 02-ASR ##########################################################
 # The set of characters accepted in the transcription.
 characters = [x for x in "abcdefghijklmnopqrstuvwxyz'?! "]
 # Mapping characters to integers
@@ -65,3 +67,6 @@ def CTCLoss(y_true, y_pred):
 
     loss = keras.backend.ctc_batch_cost(y_true, y_pred, input_length, label_length)
     return loss
+
+
+########################################################## 03- BiT ##########################################################

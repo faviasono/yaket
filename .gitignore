@@ -7,3 +7,9 @@ mlruns/
 yaket/__pycache__/
 .vscode/
 models/
+yaket/converter/__pycache__/
+*.onnx
+*.pb
+*.tflite
+examples/~/
+~/
