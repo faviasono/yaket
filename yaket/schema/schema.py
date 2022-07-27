@@ -24,6 +24,10 @@ class Accelerator(Enum):
     @classmethod
     def list(cls):
         return list(map(lambda c: c.name, cls))
+    @classmethod
+    def list_gpu(cls):
+        return list(map(lambda c: c.name if 'gpu' in c.name else '', cls))
+
 
 
 class TrainingModel(BaseModel, extra=Extra.allow):
@@ -47,6 +51,8 @@ class TrainingModel(BaseModel, extra=Extra.allow):
             return None
         if v not in Accelerator.list():
             raise ValueError(f'{v} is not a valid accelerator.\nPlease use: {Accelerator.list()}')
+        if v in Accelerator.list_gpu() and not os.environ.get('CUDA_VISIBLE_DEVICES'):
+            raise ValueError('ERROR: No GPU has been detected. Change accelerator.')
         return v
 
 

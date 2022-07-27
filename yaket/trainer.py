@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from optparse import OptionParser
+import warnings
 
 from typing import List, Optional, Tuple, Union, Any, Dict, Callable
 import numpy as np
@@ -21,7 +21,7 @@ class Trainer:
     config_path: str
     model: tf.keras.Model
     train_dataset: Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset]
-    val_dataset: Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset]
+    val_dataset: Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset] = None
     strategy: Optional[tf.distribute.Strategy] = None
     random_seed: int = 1234
     validate_yaml: bool = True
@@ -205,7 +205,7 @@ class Trainer:
         if self.val_dataset is None:
             return None
         if isinstance(self.val_dataset, tf.data.Dataset):
-            return self.val_dataset
+            return self.val_dataset.with_options(options)
         else:
             val = (
                 tf.data.Dataset.from_tensor_slices(self.val_dataset)
@@ -222,7 +222,7 @@ class Trainer:
         )
 
         if isinstance(self.train_dataset, tf.data.Dataset):
-            x = self.train_dataset
+            x = self.train_dataset.with_options(options)
         else:
             x = tf.data.Dataset.from_tensor_slices(self.train_dataset)
             if self.config.shuffle:

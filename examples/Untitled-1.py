@@ -124,7 +124,7 @@ model = MyBiTModel(num_classes=5, module=bit_module)
 from yaket.trainer import Trainer
 
 path = '/root/project/yaket/examples/files/02_trainer.yaml'
-trainer = Trainer(path, model = model, train_dataset = pipeline_train, val_dataset = pipeline_validation)
+trainer = Trainer(path, model = model, train_dataset = pipeline_train)
 trainer.train(1)
 
 # # %%
