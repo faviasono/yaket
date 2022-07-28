@@ -10,6 +10,15 @@ By having parameters defined in a human-readable format, it is possible to have 
 Morevoer, Data Scientists and ML Engineer won't need to add manually all training parameters, such as optimizer, callbacks, schedulers, thus reducing the
 likelihood of human-induced code bugs.
 
+YAKET allows to:
+1. Train models with tensorflow default optimizers, metrics, callbacks, and losses.
+2. Train models with custom modules that can be defined in a python script whose path is used as argument to Trainer class.
+3. Quickly use distributed multi-gpu and TPU training with `tf.distributed.strategy` (Experimental)
+4. Log training parameters, models, and results using `mlflow.tensorflow.autolog()` module. The run will be saved in `mlruns` folder. 
+5. Save the model in a particular folder and particular format (i.e., SavedModel,H5, or .pb)
+6. Convert the saved model to ONNX/Tensorflow-Lite for on edge-deploymnet or faster inference.
+7. More to come!
+
 ## Badges
 TODO: Tests are not covering the code YET.
 
