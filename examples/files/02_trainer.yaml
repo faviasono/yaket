@@ -13,10 +13,10 @@ callbacks:
         monitor: val_accuracy
         patience: 2
         restore_best_weights: True  
-verbose: 1 # 0, 1, 2 
+verbose: 1 
 epochs: 1
-# shuffle: False
-class_weights: # First value is boolean
+shuffle: False
+class_weights: 
     - False
-accelerator: cpu #Make it optional
+accelerator: cpu 
 steps_per_epoch: 1
