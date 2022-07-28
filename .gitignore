@@ -13,3 +13,4 @@ yaket/converter/__pycache__/
 *.tflite
 examples/~/
 ~/
+dist/
