@@ -15,6 +15,51 @@ TODO: Tests are not covering the code YET.
 
 ## Visuals
 
+The YAML file contains most of the parameters used in Keras model.fit, such as epochs, verbose, callbacks. Below an example:
+
+```yaml
+    autolog: False
+    optimizer: 
+    - Adam
+    - PiecewiseConstantDecay: 
+        boundaries: [200, 300, 400]
+        values:  [0.003, 0.0003,0.00003,0.000003]
+    batch_size: 64 
+    loss: 
+    SparseCategoricalCrossentropy: 
+        from_logits: True
+    callbacks:
+        - EarlyStopping:
+            monitor: val_accuracy
+            patience: 2
+            restore_best_weights: True  
+    verbose: 1 
+    epochs: 1
+    shuffle: False
+    class_weights: 
+        - False
+    accelerator: cpu 
+    steps_per_epoch: 1
+```
+
+The usage is very simple using python:
+
+```python
+    ...
+    # Define path to yaml file
+    path = "/yaket/examples/files/trainer.yaml"
+
+    trainer = Trainer(
+        config_path=path,
+        train_dataset=(x_train, y_train), # Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset]
+        val_dataset=(x_test, y_test), # Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset]
+        model=model, # Keras Model
+    )
+    trainer.train()
+```
+
+
+
 
 ## Installation
     pip install yaket
