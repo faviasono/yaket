@@ -84,7 +84,7 @@ class Trainer:
             validation_data=val_dataset,
             batch_size=None,
             callbacks=self._callbacks,
-            steps_per_epoch=int(self.config.steps_per_epoch),
+            steps_per_epoch=int(self.config.steps_per_epoch) if self.config.steps_per_epoch is not None else None,
             class_weight=None,  # TODO: add class_weight,
             verbose=int(self.config.verbose),
         )
@@ -103,7 +103,7 @@ class Trainer:
         self._init_trainer()
         self._autolog()
 
-        if self.strategy is None and self.config.accelerator is Accelerator.cpu:
+        if self.strategy is None and self._accelerator is Accelerator.cpu:
             train_dataset = self._get_x_y_train(self.config.batch_size)
             val_dataset = self._get_x_y_val(self.config.batch_size)
             history = self._train(train_dataset, val_dataset, epochs)
