@@ -1,0 +1,32 @@
+autolog: False
+# optimizer: Adam # SGOptimizer
+optimizer_params:
+    learning_rate: 0.01
+metrics:
+- CategoricalAccuracy
+- AUC:
+    curve: PR
+    name: prc
+batch_size: 128 
+loss: CategoricalCrossentropy 
+callbacks:
+    - EarlyStopping
+    - ReduceLROnPlateau:
+        monitor: val_loss
+        mode: min
+        patience: 5
+    # #     verbose: 1
+    # - ModelCheckpoint:
+    #     monitor: val_accuracy
+    #     mode: max
+    #     verbose: 1
+    #     save_best_only: True
+    #     save_weights_only: True
+    #     filepath: '/tmp/checkpoint'
+        
+# verbose: 1 # 0, 1, 2 
+# epochs: 1
+# shuffle: False
+class_weights: # First value is boolean
+    - False
+accelerator: cpu #Make it optional
