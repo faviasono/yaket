@@ -1,17 +1,20 @@
 # YAKET: Yaml Keras Trainer (or Yet Another Keras Trainer)
 
-## Project status
+## Project status 🚧
 Work In Progress. 
 
+## Installation 💻
+    pip install yaket
 
-## Description
+## Description 🔥
 Yaket is a lightweight and simple module to train Keras modules by defining parameters directly using YAML file. YAML parameters are validated using Pydantic, hence typos or not allowed parameters will throw errors at the beginning of the execution.
 This allows developer to focus uniquely on what matters: data and model development.
 By having parameters defined in a human-readable format, it is possible to have an holistic view of training procedure without opening the code.
 Morevoer, Data Scientists and ML Engineer won't need to add manually all training parameters, such as optimizer, callbacks, schedulers, thus reducing the
 likelihood of human-induced code bugs.
 
-YAKET allows to:
+## Features 🎊
+
 1. Train models with tensorflow default optimizers, metrics, callbacks, and losses.
 2. Train models with custom modules that can be defined in a python script whose path is used as argument to Trainer class.
 3. Quickly use distributed multi-gpu and TPU training with `tf.distributed.strategy` (Experimental)
@@ -20,10 +23,10 @@ YAKET allows to:
 6. Convert the saved model to ONNX/Tensorflow-Lite for on edge-deploymnet or faster inference.
 7. More to come!
 
-## Badges
+## Badges ✅
 TODO: Tests are not covering the code YET.
 
-## Visuals
+## Visuals 📖
 
 The YAML file contains most of the parameters used in Keras model.fit, such as epochs, verbose, callbacks. Below an example:
 
@@ -67,23 +70,6 @@ The usage is very simple using python:
     )
     trainer.train()
 ```
-
-
-## Description
-Yaket is a lightweight and simple module to train Keras modules by defining parameters directly using YAML file.
-This allows developer to focus uniquely on what matters: data and model development.
-By having parameters defined in a human-readable format, it is possible to have an holistic view of training procedure without opening the code.
-Morevoer, Data Scientists and ML Engineer won't need to add manually all training parameters, such as optimizer, callbacks, schedulers, thus reducing the
-likelihood of human-induced code bugs.
-
-## Badges
-TODO: Tests are not covering the code YET.
-
-## Visuals
-
-## Installation
-    pip install yaket
-
 
 
 ## License
