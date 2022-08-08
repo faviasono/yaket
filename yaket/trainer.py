@@ -190,10 +190,8 @@ class Trainer:
         
         try:
             self.model.save(self._out_path) # if not custom model/layers
-            print("Saved with pb format")
         except:
             self.model.save_weights(self._out_path, save_format='tf')
-            print("Saved with weghts")
 
             
 
