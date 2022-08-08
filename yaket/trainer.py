@@ -491,8 +491,6 @@ class Trainer:
             del self.train_dataset
         if self.val_dataset is not None:
             del self.val_dataset
-        if self.test_dataset is not None:
-            del self.test_dataset
         gc.collect()
 
     def summary_model(self):
@@ -566,3 +564,5 @@ if __name__ == "__main__":
         strategy=None,
     )
     trainer.train(1)
+
+    trainer.clear_ram()
