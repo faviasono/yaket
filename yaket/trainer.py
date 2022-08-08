@@ -483,9 +483,10 @@ class Trainer:
                 tf.random.set_seed(random_seed)
                 np.random.seed(random_seed)
 
-    def clear_ram(self):
+    def clear_ram(self, clear_model: bool = True):
         "Delete model and all datasets saved in the Trainer class"
-        del self.model
+        if clear_model:
+            del self.model
         if self.train_dataset is not None:
             del self.train_dataset
         if self.val_dataset is not None:
