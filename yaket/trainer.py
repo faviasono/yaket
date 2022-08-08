@@ -1,3 +1,4 @@
+from cmath import isfinite
 from dataclasses import dataclass
 
 from typing import List, Optional, Tuple, Type, Union, Any, Dict, Callable
@@ -16,7 +17,7 @@ import sys
 
 @dataclass
 class Trainer:
-    config_path: str
+    config_params: Union[Dict, str]
     model: tf.keras.Model
     train_dataset: Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset]
     val_dataset: Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset] = None
@@ -40,16 +41,21 @@ class Trainer:
     _out_path: str = None
     _user_strategy: bool = False
     _trainer_initialized: bool = False
+    
 
     def __post_init__(self):
         """Initialize the trainer: check inputs, load custom modules, parse configuration file."""
 
         if not isinstance(self.model, tf.keras.models.Model):
             raise Exception("model must be keras model")
-        if not isinstance(self.config_path, str) or not os.path.isfile(
-            self.config_path
+
+        if not isinstance(self.config_params, str) and not isinstance(self.config_params, dict):
+            raise Exception("Config_params must be a dictionary or a file path")
+        if isinstance(self.config_params, str) and not os.path.isfile(
+            self.config_params
         ):
-            raise Exception("Config path must be a valid file path")
+            raise Exception("Config_params must be a valid file path")
+
         if self.strategy is not None and not isinstance(
             self.strategy, tf.distribute.Strategy
         ):
@@ -251,6 +257,7 @@ class Trainer:
     def validate_config(self):
         """Validate again the configuration file. Used after chaning the config parameters"""
         TrainingModel(**self.config.__dict__)
+        self._validate_config_file()
 
 
     @property
@@ -300,7 +307,11 @@ class Trainer:
         return int(np.argmin(memory_free_values))
 
     def _parse_config(self) -> Any:
-        return yaml_to_pydantic(self.config_path, self.validate_yaml)
+        if isinstance(self.config_params, str):
+            return yaml_to_pydantic(self.config_params, self.validate_yaml)
+        if isinstance(self.config_params, dict):
+            return TrainingModel(**self.config_params)
+
 
     def _validate_config_file(self):
         "Validate existence of the loss, optimizer and callbacks defined in the config file"
@@ -565,7 +576,7 @@ if __name__ == "__main__":
     path = "/root/project/yaket/examples/files/trainer.yaml"
 
     trainer = Trainer(
-        config_path=path,
+        config_params=path,
         train_dataset=(x_train, y_train),
         val_dataset=(x_test, y_test),
         model=model,
