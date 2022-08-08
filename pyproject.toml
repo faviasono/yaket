@@ -1,10 +1,21 @@
+[tool.bumpver]
+current_version = "1.0.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message  = "Bump version {old_version} -> {new_version}"
+commit          = true
+tag             = true
+push            = false
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
+"yaket/__init__.py" = ["{version}"]
+
 [build-system]
 requires = ["setuptools>=61.0","wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "yaket"
-version = "0.0.2"
 authors = [
     { name="Andrea Favia", email="andrea.favia@pm.me" },
 ]
@@ -16,13 +27,15 @@ classifiers = [
 ]
 
 dependencies = [
-    'pydantic','pyyaml','mlflow','tf2onnx'
+    'pydantic>=1.9.0','mlflow>=1.27.0','tf2onnx>=1.11'
 ]
 
 [project.optional-dependencies]
 tensorflow = ["tensorflow>=2.4.0"]
-examples = ['jiwer','onnxruntime']
+examples = ['jiwer','onnxruntime>=1.12']
 
+[project.urls]
+Source = "https://gitlab.com/andreafavia/yaket"
 
 [tool.setuptools.packages.find]
 exclude = ['examples*']
