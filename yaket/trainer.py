@@ -256,7 +256,10 @@ class Trainer:
 
     def validate_config(self):
         """Validate again the configuration file. Used after chaning the config parameters"""
-        TrainingModel(**self.config.__dict__)
+
+        temp_dir = {k:v for k,v in self.config.__dict__.items() if v is not None}
+
+        TrainingModel(**temp_dir)
         self._validate_config_file()
 
 
