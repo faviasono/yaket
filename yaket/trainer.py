@@ -39,9 +39,10 @@ class Trainer:
     _log: bool = False
     _out_path: str = None
     _user_strategy: bool = False
+    _trainer_initialized: bool = False
 
-    def _init_trainer(self) -> None:
-        """Initialize the trainer"""
+    def __post_init__(self):
+        """Initialize the trainer: check inputs, load custom modules, parse configuration file."""
 
         if not isinstance(self.model, tf.keras.models.Model):
             raise Exception("model must be keras model")
@@ -72,6 +73,8 @@ class Trainer:
         self._callbacks = self._get_callbacks()
         self._input_shape = self._get_input_shape()
 
+        self._trainer_initialized = True
+
     def _train(self, train_dataset, val_dataset, epochs: int = None):
         """Train the model"""
 
@@ -99,8 +102,6 @@ class Trainer:
 
         """
 
-        self._init_trainer()
-        self._autolog()
 
         if self.strategy is None and self._accelerator is Accelerator.cpu:
             train_dataset = self._get_x_y_train(self.config.batch_size)
@@ -157,6 +158,8 @@ class Trainer:
         )
         if converter.convert():
             print(f"Successfully converted to format {format} ")
+
+    
 
     def _get_input_shape(self):
         """Get the input shape of input dataset"""
@@ -245,9 +248,15 @@ class Trainer:
             x = x.batch(batch_size).prefetch(1).with_options(options)
         return x
 
+    def validate_config(self):
+        """Validate again the configuration file. Used after chaning the config parameters"""
+        TrainingModel(**self.config.__dict__)
+
+
     @property
     def config(self):
         return self._config
+
 
     def _compile_model(self) -> None:
         """Compile the model"""
@@ -547,7 +556,6 @@ if __name__ == "__main__":
             layers.MaxPooling2D(pool_size=(2, 2)),
             layers.Flatten(),
             layers.Dropout(0.5),
-            MyDenseLayer(10),
             layers.Dense(num_classes, activation="softmax"),
         ]
     )
