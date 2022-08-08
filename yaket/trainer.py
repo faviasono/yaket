@@ -468,9 +468,12 @@ class Trainer:
     def clear_ram(self):
         "Delete model and all datasets saved in the Trainer class"
         del self.model
-        del self.train_dataset
-        del self.val_dataset
-        del self.test_dataset
+        if self.train_dataset is not None:
+            del self.train_dataset
+        if self.val_dataset is not None:
+            del self.val_dataset
+        if self.test_dataset is not None:
+            del self.test_dataset
         gc.collect()
 
     def summary_model(self):
