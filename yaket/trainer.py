@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from typing import List, Optional, Tuple, Union, Any, Dict, Callable
+from typing import List, Optional, Tuple, Type, Union, Any, Dict, Callable
 import numpy as np
 import tensorflow as tf
 import gc
@@ -38,6 +38,7 @@ class Trainer:
     _accelerator: Optional[Accelerator] = None
     _log: bool = False
     _out_path: str = None
+    _user_strategy: bool = False
 
     def _init_trainer(self) -> None:
         """Initialize the trainer"""
@@ -111,6 +112,7 @@ class Trainer:
             train_dataset = self._get_x_y_train(batch_size)
             val_dataset = self._get_x_y_val(batch_size)
             with strategy.scope():
+                self._clone_model() if not self._user_strategy else None # Clone model only if not using user strategy (e.g. CustoModule)
                 history = self._train(train_dataset, val_dataset, epochs)
 
         self._save_model()
@@ -167,31 +169,48 @@ class Trainer:
 
     def _save_model(self):
         """Save the model by loading best checkpoint if available and saving it to mlflow or local path"""
+        #TODO: add custom model saving with weights
+
+
         if self._model_checkpoint is not None:
             self.model.load_weights(self._model_checkpoint)
             if self._log:
-                self.model.save("/tmp/best_model")
                 run = mlflow.last_active_run()
                 idx = 7  # TODO: check is always the same
                 artifact_path = run.info.artifact_uri[idx:]
                 self._out_path = artifact_path + f"/best_model"
-                self.model.save(self._out_path)
             else:
                 os.makedirs(os.getcwd() + "/models", exist_ok=True)
                 t = int(time.time())
                 self._out_path = os.getcwd() + f"/models/{t}_best_model"
-                self.model.save(self._out_path)
         else:
             os.makedirs(os.getcwd() + "/models", exist_ok=True)
             t = int(time.time())
             self._out_path = os.getcwd() + f"/models/{t}_best_model"
-            self.model.save(self._out_path)
+        
+        try:
+            self.model.save(self._out_path) # if not custom model/layers
+            print("Saved with pb format")
+        except:
+            self.model.save_weights(self._out_path, save_format='tf')
+            print("Saved with weghts")
+
+            
+
 
     def _clone_model(self):
         """Clone the model so that it works within tf.distribute.Strategy
         It works only for models not using custom objects
         """
-        self.model = tf.keras.models.clone_model(self.model)
+
+        if not self.model._is_graph_network:
+            raise Exception("Model must be be a Sequential or Functional API model without custom objects")
+        try:
+            self.model = tf.keras.models.clone_model(self.model)
+        except NotImplementedError: # there's custom layer
+            raise 
+    
+
 
     def _get_x_y_val(self, batch_size):
         """Get the x and y for training based on the format of the dataset"""
@@ -260,6 +279,7 @@ class Trainer:
                 # TODO: check configuration for tpu strategy
                 return tf.distribute.TPUStrategy()
         else:
+            self._user_strategy = True
             return self.strategy
 
     @staticmethod
@@ -486,6 +506,20 @@ if __name__ == "__main__":
     from tensorflow import keras
     from tensorflow.keras import layers
 
+
+    class MyDenseLayer(tf.keras.layers.Layer):
+        def __init__(self, num_outputs):
+            super(MyDenseLayer, self).__init__()
+            self.num_outputs = num_outputs
+
+        def build(self, input_shape):
+            self.kernel = self.add_weight("kernel",
+                                        shape=[int(input_shape[-1]),
+                                                self.num_outputs])
+
+        def call(self, inputs):
+            return tf.matmul(inputs, self.kernel)
+
     # Model / data parameters
     num_classes = 10
     input_shape = (28, 28, 1)
@@ -507,20 +541,19 @@ if __name__ == "__main__":
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
-    strategy = tf.distribute.MirroredStrategy()
-    with strategy.scope():
-        model = keras.Sequential(
-            [
-                keras.Input(shape=input_shape),
-                layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
-                layers.MaxPooling2D(pool_size=(2, 2)),
-                layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-                layers.MaxPooling2D(pool_size=(2, 2)),
-                layers.Flatten(),
-                layers.Dropout(0.5),
-                layers.Dense(num_classes, activation="softmax"),
-            ]
-        )
+    model = keras.Sequential(
+        [
+            keras.Input(shape=input_shape),
+            layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Flatten(),
+            layers.Dropout(0.5),
+            MyDenseLayer(10),
+            layers.Dense(num_classes, activation="softmax"),
+        ]
+    )
 
     model.summary()
 
@@ -531,6 +564,6 @@ if __name__ == "__main__":
         train_dataset=(x_train, y_train),
         val_dataset=(x_test, y_test),
         model=model,
-        strategy=strategy,
+        strategy=None,
     )
-    trainer.train()
+    trainer.train(1)
