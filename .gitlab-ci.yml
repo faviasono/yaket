@@ -15,11 +15,15 @@ unit_trainer:
   image: tensorflow/tensorflow:2.9.1
   script:
     - pip install -e . 
-    - python -m unittest tests/tests_trainer.py
+    - pip install pytest
+    - pytest tests/tests_trainer.py --junitxml=report.xml
+  artifacts:
+    when: always
+    report:
+      junit: report.xml
 
   #if: $CI_PIPELINE_SOURCE == 'merge_request_event'
         
-
 
 
 
