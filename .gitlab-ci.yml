@@ -19,12 +19,8 @@ unit_trainer:
     - pytest tests/tests_trainer.py --junitxml=report.xml
   artifacts:
     when: always
-    report:
+    reports:
       junit: report.xml
 
   #if: $CI_PIPELINE_SOURCE == 'merge_request_event'
         
-
-
-
-
