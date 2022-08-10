@@ -19,8 +19,8 @@ import sys
 class Trainer:
     config_params: Union[Dict, str]
     model: tf.keras.Model
-    train_dataset: Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset]
-    val_dataset: Union[Tuple[np.ndarray, np.ndarray], tf.data.Dataset] = None
+    train_dataset: Union[Tuple[np.ndarray, np.ndarray],Tuple[np.ndarray, np.ndarray, np.ndarray], tf.data.Dataset]
+    val_dataset: Union[Tuple[np.ndarray, np.ndarray],Tuple[np.ndarray, np.ndarray, np.ndarray], tf.data.Dataset] = None
     strategy: Optional[tf.distribute.Strategy] = None
     random_seed: int = 1234
     validate_yaml: bool = True
@@ -41,6 +41,7 @@ class Trainer:
     _out_path: str = None
     _user_strategy: bool = False
     _trainer_initialized: bool = False
+    _sample_weight_mode: Optional[str] = None
     
 
     def __post_init__(self):
@@ -48,7 +49,12 @@ class Trainer:
 
         if not isinstance(self.model, tf.keras.models.Model):
             raise Exception("model must be keras model")
-
+        if isinstance(self.train_dataset, tuple):
+            if len(self.train_dataset) <2 or len(self.train_dataset) > 3:
+                raise Exception("train_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
+        if isinstance(self.val_dataset, tuple):
+            if len(self.val_dataset) < 2 or len(self.val_dataset) > 3:
+                raise Exception("val_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
         if not isinstance(self.config_params, str) and not isinstance(self.config_params, dict):
             raise Exception("Config_params must be a dictionary or a file path")
         if isinstance(self.config_params, str) and not os.path.isfile(
@@ -78,6 +84,7 @@ class Trainer:
 
         self._callbacks = self._get_callbacks()
         self._input_shape = self._get_input_shape()
+        self._sample_weight_mode = self._get_sample_weight_mode()
 
         self._trainer_initialized = True
 
@@ -166,6 +173,11 @@ class Trainer:
             print(f"Successfully converted to format {format} ")
 
     
+    def _get_sample_weight_mode(self):
+        """Get the sample weight mode from the config file"""
+        if self.config.sample_weight_mode is not None:
+            return self.config.sample_weight_mode
+
 
     def _get_input_shape(self):
         """Get the input shape of input dataset"""
@@ -276,7 +288,7 @@ class Trainer:
         self._metrics = self._get_metrics()
 
         self.model.compile(
-            optimizer=self._optimizer, loss=self._loss, metrics=self._get_metrics()
+            optimizer=self._optimizer, loss=self._loss, metrics=self._get_metrics(), sample_weight_mode = self._sample_weight_mode
         )
 
     def _get_strategy(self):
@@ -578,9 +590,25 @@ if __name__ == "__main__":
 
     path = "/root/project/yaket/examples/files/trainer.yaml"
 
+    from sklearn.utils.class_weight import compute_sample_weight
+    from sklearn.utils import class_weight
+
+    # define your class weights or automatically compute them
+
+    yargmax = np.argmax(y_train, axis=1)
+    class_weights = class_weight.compute_class_weight('balanced',
+                                                    classes = np.unique(yargmax.flatten()),
+                                                    y = yargmax.flatten())
+    class_weight_dict = dict(enumerate(class_weights))
+
+
+    # compute the sample weights
+    sample_weigth = compute_sample_weight(class_weight_dict, yargmax.flatten()).reshape(yargmax.shape)
+    print(y_train.shape, sample_weigth.shape, x_train.shape)
+
     trainer = Trainer(
         config_params=path,
-        train_dataset=(x_train, y_train),
+        train_dataset=(x_train, y_train, sample_weigth),
         val_dataset=(x_test, y_test),
         model=model,
         strategy=None,
