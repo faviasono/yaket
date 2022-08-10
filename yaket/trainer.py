@@ -19,8 +19,16 @@ import sys
 class Trainer:
     config_params: Union[Dict, str]
     model: tf.keras.Model
-    train_dataset: Union[Tuple[np.ndarray, np.ndarray],Tuple[np.ndarray, np.ndarray, np.ndarray], tf.data.Dataset]
-    val_dataset: Union[Tuple[np.ndarray, np.ndarray],Tuple[np.ndarray, np.ndarray, np.ndarray], tf.data.Dataset] = None
+    train_dataset: Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        tf.data.Dataset,
+    ]
+    val_dataset: Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        tf.data.Dataset,
+    ] = None
     strategy: Optional[tf.distribute.Strategy] = None
     random_seed: int = 1234
     validate_yaml: bool = True
@@ -42,7 +50,6 @@ class Trainer:
     _user_strategy: bool = False
     _trainer_initialized: bool = False
     _sample_weight_mode: Optional[str] = None
-    
 
     def __post_init__(self):
         """Initialize the trainer: check inputs, load custom modules, parse configuration file."""
@@ -50,18 +57,24 @@ class Trainer:
         if not isinstance(self.model, tf.keras.models.Model):
             raise TypeError("model must be keras model")
         if isinstance(self.train_dataset, tuple):
-            if len(self.train_dataset) <2 or len(self.train_dataset) > 3:
-                raise ValueError("train_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
+            if len(self.train_dataset) < 2 or len(self.train_dataset) > 3:
+                raise ValueError(
+                    "train_dataset must be a tuple of (x, y) or (x, y, sample_weight)"
+                )
             for val in self.train_dataset:
                 if not isinstance(val, np.ndarray):
                     raise TypeError("train_dataset must be a tuple of numpy arrays")
         if isinstance(self.val_dataset, tuple):
             if len(self.val_dataset) < 2 or len(self.val_dataset) > 3:
-                raise ValueError("val_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
+                raise ValueError(
+                    "val_dataset must be a tuple of (x, y) or (x, y, sample_weight)"
+                )
             for val in self.val_dataset:
                 if not isinstance(val, np.ndarray):
                     raise TypeError("val_dataset must be a tuple of numpy arrays")
-        if not (isinstance(self.config_params, dict) or isinstance(self.config_params, str)):
+        if not (
+            isinstance(self.config_params, dict) or isinstance(self.config_params, str)
+        ):
             raise TypeError("Config_params must be a dictionary or a file path")
         if isinstance(self.config_params, str) and not os.path.isfile(
             self.config_params
@@ -80,7 +93,9 @@ class Trainer:
             if not isinstance(self.custom_modules_path, str) or not os.path.isfile(
                 self.custom_modules_path
             ):
-                raise FileNotFoundError("Costum modules path must be a valid path string")
+                raise FileNotFoundError(
+                    "Costum modules path must be a valid path string"
+                )
 
         if self.custom_modules_path:
             self._import_custom_model(self.custom_modules_path)
@@ -105,7 +120,9 @@ class Trainer:
             validation_data=val_dataset,
             batch_size=None,
             callbacks=self._callbacks,
-            steps_per_epoch=int(self.config.steps_per_epoch) if self.config.steps_per_epoch is not None else None,
+            steps_per_epoch=int(self.config.steps_per_epoch)
+            if self.config.steps_per_epoch is not None
+            else None,
             class_weight=None,  # TODO: add class_weight,
             verbose=int(self.config.verbose),
         )
@@ -121,7 +138,6 @@ class Trainer:
 
         """
 
-
         if self.strategy is None and self._accelerator is Accelerator.cpu:
             train_dataset = self._get_x_y_train(self.config.batch_size)
             val_dataset = self._get_x_y_val(self.config.batch_size)
@@ -132,7 +148,7 @@ class Trainer:
             train_dataset = self._get_x_y_train(batch_size)
             val_dataset = self._get_x_y_val(batch_size)
             with strategy.scope():
-                self._clone_model() if not self._user_strategy else None # Clone model only if not using user strategy (e.g. CustoModule)
+                self._clone_model() if not self._user_strategy else None  # Clone model only if not using user strategy (e.g. CustoModule)
                 history = self._train(train_dataset, val_dataset, epochs)
 
         self._save_model()
@@ -166,24 +182,24 @@ class Trainer:
 
         """
         if from_command_line and self._out_path is None:
-            raise Exception("You need to have a saved model before converting using command line")
+            raise Exception(
+                "You need to have a saved model before converting using command line"
+            )
         model_to_convert = self.model if not from_command_line else None
         converter = Converter(
             out_format=format_model.lower(),
             opset_onnx=opset_onnx,
             model_path=self._out_path,
             model=model_to_convert,
-            out_path = output_path,
+            out_path=output_path,
         )
         if converter.convert():
             print(f"Successfully converted to format {format} ")
 
-    
     def _get_sample_weight_mode(self):
         """Get the sample weight mode from the config file"""
         if self.config.sample_weight_mode is not None:
             return self.config.sample_weight_mode
-
 
     def _get_input_shape(self):
         """Get the input shape of input dataset"""
@@ -196,8 +212,7 @@ class Trainer:
 
     def _save_model(self):
         """Save the model by loading best checkpoint if available and saving it to mlflow or local path"""
-        #TODO: add custom model saving with weights
-
+        # TODO: add custom model saving with weights
 
         if self._model_checkpoint is not None:
             self.model.load_weights(self._model_checkpoint)
@@ -214,14 +229,11 @@ class Trainer:
             os.makedirs(os.getcwd() + "/models", exist_ok=True)
             t = int(time.time())
             self._out_path = os.getcwd() + f"/models/{t}_best_model"
-        
+
         try:
-            self.model.save(self._out_path) # if not custom model/layers
+            self.model.save(self._out_path)  # if not custom model/layers
         except:
-            self.model.save_weights(self._out_path, save_format='tf')
-
-            
-
+            self.model.save_weights(self._out_path, save_format="tf")
 
     def _clone_model(self):
         """Clone the model so that it works within tf.distribute.Strategy
@@ -229,13 +241,13 @@ class Trainer:
         """
 
         if not self.model._is_graph_network:
-            raise Exception("Model must be be a Sequential or Functional API model without custom objects")
+            raise Exception(
+                "Model must be be a Sequential or Functional API model without custom objects"
+            )
         try:
             self.model = tf.keras.models.clone_model(self.model)
-        except NotImplementedError: # there's custom layer
-            raise 
-    
-
+        except NotImplementedError:  # there's custom layer
+            raise
 
     def _get_x_y_val(self, batch_size):
         """Get the x and y for training based on the format of the dataset"""
@@ -275,16 +287,14 @@ class Trainer:
     def validate_config(self):
         """Validate again the configuration file. Used after chaning the config parameters"""
 
-        temp_dir = {k:v for k,v in self.config.__dict__.items() if v is not None}
+        temp_dir = {k: v for k, v in self.config.__dict__.items() if v is not None}
 
         TrainingModel(**temp_dir)
         self._validate_config_file()
 
-
     @property
     def config(self):
         return self._config
-
 
     def _compile_model(self) -> None:
         """Compile the model"""
@@ -294,7 +304,10 @@ class Trainer:
         self._metrics = self._get_metrics()
 
         self.model.compile(
-            optimizer=self._optimizer, loss=self._loss, metrics=self._get_metrics(), sample_weight_mode = self._sample_weight_mode
+            optimizer=self._optimizer,
+            loss=self._loss,
+            metrics=self._get_metrics(),
+            sample_weight_mode=self._sample_weight_mode,
         )
 
     def _get_strategy(self):
@@ -332,7 +345,6 @@ class Trainer:
             return yaml_to_pydantic(self.config_params, self.validate_yaml)
         if isinstance(self.config_params, dict):
             return TrainingModel(**self.config_params)
-
 
     def _validate_config_file(self):
         "Validate existence of the loss, optimizer and callbacks defined in the config file"
@@ -381,9 +393,7 @@ class Trainer:
                     return self._load_custom_module(optimizer, opt_pars)
             else:
                 opt_name = opt[0]
-                optimizer = getattr(
-                    tf.keras.optimizers, f"{opt_name}", default_value
-                )
+                optimizer = getattr(tf.keras.optimizers, f"{opt_name}", default_value)
                 if optimizer == default_value:
                     optimizer = self._load_custom_module(optimizer)
                 if isinstance(opt[1], dict):
@@ -391,13 +401,15 @@ class Trainer:
                     v = list(opt[1].values())[0]
                     scheduler = getattr(tf.keras.optimizers.schedules, k, default_value)
                     if scheduler == default_value:
-                        raise ValueError(f"{v} is not a valid scheduler. Only available from keras")
+                        raise ValueError(
+                            f"{v} is not a valid scheduler. Only available from keras"
+                        )
                     else:
-                        opt_pars['learning_rate'] = scheduler(**v)
+                        opt_pars["learning_rate"] = scheduler(**v)
                         return optimizer(**opt_pars)
         elif isinstance(opt, str):
             optimizer = getattr(
-            tf.keras.optimizers, f"{self.config.optimizer}", default_value
+                tf.keras.optimizers, f"{self.config.optimizer}", default_value
             )
             if optimizer != default_value:
                 return optimizer(**opt_pars)
@@ -424,7 +436,6 @@ class Trainer:
                 return loss(**loss_params)
             else:
                 return self._load_custom_module(loss_config, loss_params)
-
 
     def _get_callbacks(self) -> List[tf.keras.callbacks.Callback]:
         """Get the callbacks from the config file"""
@@ -468,7 +479,7 @@ class Trainer:
                     callbacks.append(self._load_custom_module(name_callback, args))
 
         return callbacks
-        
+
     def _get_metrics(self) -> List[Union[tf.keras.metrics.Metric, Callable]]:
         """Get the metrics"""
         if self.config.metrics is None:
@@ -547,9 +558,10 @@ if __name__ == "__main__":
     model = keras.models.Sequential()
     model.add(layers.Dense(64, activation="relu"))
 
-    trainer_path = '/root/project/yaket/examples/files/03_trainer.yaml'
-    trainer = Trainer(trainer_path, model, train_dataset = (None, None), val_dataset = (None, None))
-
+    trainer_path = "/root/project/yaket/examples/files/03_trainer.yaml"
+    trainer = Trainer(
+        trainer_path, model, train_dataset=(None, None), val_dataset=(None, None)
+    )
 
     class MyDenseLayer(tf.keras.layers.Layer):
         def __init__(self, num_outputs):
@@ -557,9 +569,9 @@ if __name__ == "__main__":
             self.num_outputs = num_outputs
 
         def build(self, input_shape):
-            self.kernel = self.add_weight("kernel",
-                                        shape=[int(input_shape[-1]),
-                                                self.num_outputs])
+            self.kernel = self.add_weight(
+                "kernel", shape=[int(input_shape[-1]), self.num_outputs]
+            )
 
         def call(self, inputs):
             return tf.matmul(inputs, self.kernel)
@@ -608,14 +620,15 @@ if __name__ == "__main__":
     # define your class weights or automatically compute them
 
     yargmax = np.argmax(y_train, axis=1)
-    class_weights = class_weight.compute_class_weight('balanced',
-                                                    classes = np.unique(yargmax.flatten()),
-                                                    y = yargmax.flatten())
+    class_weights = class_weight.compute_class_weight(
+        "balanced", classes=np.unique(yargmax.flatten()), y=yargmax.flatten()
+    )
     class_weight_dict = dict(enumerate(class_weights))
 
-
     # compute the sample weights
-    sample_weigth = compute_sample_weight(class_weight_dict, yargmax.flatten()).reshape(yargmax.shape)
+    sample_weigth = compute_sample_weight(class_weight_dict, yargmax.flatten()).reshape(
+        yargmax.shape
+    )
     print(y_train.shape, sample_weigth.shape, x_train.shape)
 
     trainer = Trainer(

@@ -12,7 +12,7 @@ class Converter:
     out_format: Union[str, Path]
     model: Optional[tf.keras.Model] = None
     model_path: Optional[Union[str, Path]] = None
-    out_path: Union[str, Path] = "model.onnx" # model.tflite
+    out_path: Union[str, Path] = "model.onnx"  # model.tflite
     opset_onnx: int = 15
 
     def _init_converter(self) -> None:
@@ -69,7 +69,9 @@ class Converter:
     def _convert_to_tflite(self):
 
         if self.model is None:
-            tf_converter = tf.lite.TFLiteConverter.from_saved_model(self.model_path) # path to the SavedModel directory
+            tf_converter = tf.lite.TFLiteConverter.from_saved_model(
+                self.model_path
+            )  # path to the SavedModel directory
             tflite_model = tf_converter.convert()
         else:
             tf_converter = tf.lite.TFLiteConverter.from_keras_model(self.model)
@@ -78,5 +80,5 @@ class Converter:
         if not self.out_path.endswith(".tflite"):
             self.out_path = self.out_path + ".tflite"
         # save model
-        with open(self.out_path, 'wb') as f:
+        with open(self.out_path, "wb") as f:
             f.write(tflite_model)
