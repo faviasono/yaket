@@ -1,18 +1,18 @@
-from cmath import isfinite
-from dataclasses import dataclass
-
-from typing import List, Optional, Tuple, Type, Union, Any, Dict, Callable
-import numpy as np
-import tensorflow as tf
 import gc
-from yaket.schema.schema import TrainingModel, yaml_to_pydantic, Accelerator
-from yaket.converter.converter import Converter
 import importlib
-import mlflow
 import os
-import time
 import subprocess as sp
 import sys
+import time
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+import mlflow
+import numpy as np
+import tensorflow as tf
+
+from yaket.converter.converter import Converter
+from yaket.schema.schema import Accelerator, TrainingModel, yaml_to_pydantic
 
 
 @dataclass
@@ -51,82 +51,7 @@ class Trainer:
     _trainer_initialized: bool = False
     _sample_weight_mode: Optional[str] = None
 
-    def __post_init__(self):
-        """Initialize the trainer: check inputs, load custom modules, parse configuration file."""
-
-        if not isinstance(self.model, tf.keras.models.Model):
-            raise TypeError("model must be keras model")
-        if isinstance(self.train_dataset, tuple):
-            if len(self.train_dataset) < 2 or len(self.train_dataset) > 3:
-                raise ValueError(
-                    "train_dataset must be a tuple of (x, y) or (x, y, sample_weight)"
-                )
-            for val in self.train_dataset:
-                if not isinstance(val, np.ndarray):
-                    raise TypeError("train_dataset must be a tuple of numpy arrays")
-        if isinstance(self.val_dataset, tuple):
-            if len(self.val_dataset) < 2 or len(self.val_dataset) > 3:
-                raise ValueError(
-                    "val_dataset must be a tuple of (x, y) or (x, y, sample_weight)"
-                )
-            for val in self.val_dataset:
-                if not isinstance(val, np.ndarray):
-                    raise TypeError("val_dataset must be a tuple of numpy arrays")
-        if not (
-            isinstance(self.config_params, dict) or isinstance(self.config_params, str)
-        ):
-            raise TypeError("Config_params must be a dictionary or a file path")
-        if isinstance(self.config_params, str) and not os.path.isfile(
-            self.config_params
-        ):
-            raise FileNotFoundError("Config_params must be a valid file path")
-
-        if self.strategy is not None and not isinstance(
-            self.strategy, tf.distribute.Strategy
-        ):
-            raise TypeError("Strategy must be keras strategy object")
-        if not isinstance(self.random_seed, int):
-            raise TypeError("Random seed must be an integer")
-        if not isinstance(self.validate_yaml, bool):
-            raise TypeError("Validate yaml must be a boolean value")
-        if self.custom_modules_path is not None:
-            if not isinstance(self.custom_modules_path, str) or not os.path.isfile(
-                self.custom_modules_path
-            ):
-                raise FileNotFoundError(
-                    "Costum modules path must be a valid path string"
-                )
-
-        if self.custom_modules_path:
-            self._import_custom_model(self.custom_modules_path)
-        self._config = self._parse_config()
-        self._accelerator = Accelerator[self.config.accelerator]
-        self._validate_config_file()
-
-        self._callbacks = self._get_callbacks()
-        self._input_shape = self._get_input_shape()
-        self._sample_weight_mode = self._get_sample_weight_mode()
-
-        self._trainer_initialized = True
-
-    def _train(self, train_dataset, val_dataset, epochs: int = None):
-        """Train the model"""
-
-        self._compile_model()
-        history = self.model.fit(
-            x=train_dataset,
-            y=None,
-            epochs=int(self.config.epochs) if epochs is None else epochs,
-            validation_data=val_dataset,
-            batch_size=None,
-            callbacks=self._callbacks,
-            steps_per_epoch=int(self.config.steps_per_epoch)
-            if self.config.steps_per_epoch is not None
-            else None,
-            class_weight=None,  # TODO: add class_weight,
-            verbose=int(self.config.verbose),
-        )
-        return history
+    # __post_init__ is called after the __init__ function automatically
 
     def train(self, epochs: int = None):
         """Train the model. Main function to call.
@@ -155,6 +80,28 @@ class Trainer:
         self._history = history.history
         self._clean_workspace()
         return history
+
+    def _train(self, train_dataset, val_dataset, epochs: int = None):
+        """Train the model"""
+
+        self._compile_model()
+        history = self.model.fit(
+            x=train_dataset,
+            y=None,
+            epochs=int(self.config.epochs) if epochs is None else epochs,
+            validation_data=val_dataset,
+            batch_size=None,
+            callbacks=self._callbacks,
+            steps_per_epoch=int(self.config.steps_per_epoch)
+            if self.config.steps_per_epoch is not None
+            else None,
+            class_weight=None,  # TODO: add class_weight,
+            verbose=int(self.config.verbose),
+        )
+        return history
+
+    
+
 
     def convert_model(
         self,
@@ -212,7 +159,6 @@ class Trainer:
 
     def _save_model(self):
         """Save the model by loading best checkpoint if available and saving it to mlflow or local path"""
-        # TODO: add custom model saving with weights
 
         if self._model_checkpoint is not None:
             self.model.load_weights(self._model_checkpoint)
@@ -549,6 +495,64 @@ class Trainer:
         """Summary of the model"""
         self.model.summary()
 
+    def __post_init__(self):
+        """Initialize the trainer: check inputs, load custom modules, parse configuration file."""
+
+        if not isinstance(self.model, tf.keras.models.Model):
+            raise TypeError("model must be keras model")
+        if isinstance(self.train_dataset, tuple):
+            if len(self.train_dataset) < 2 or len(self.train_dataset) > 3:
+                raise ValueError(
+                    "train_dataset must be a tuple of (x, y) or (x, y, sample_weight)"
+                )
+            for val in self.train_dataset:
+                if not isinstance(val, np.ndarray):
+                    raise TypeError("train_dataset must be a tuple of numpy arrays")
+        if isinstance(self.val_dataset, tuple):
+            if len(self.val_dataset) < 2 or len(self.val_dataset) > 3:
+                raise ValueError(
+                    "val_dataset must be a tuple of (x, y) or (x, y, sample_weight)"
+                )
+            for val in self.val_dataset:
+                if not isinstance(val, np.ndarray):
+                    raise TypeError("val_dataset must be a tuple of numpy arrays")
+        if not (
+            isinstance(self.config_params, dict) or isinstance(self.config_params, str)
+        ):
+            raise TypeError("Config_params must be a dictionary or a file path")
+        if isinstance(self.config_params, str) and not os.path.isfile(
+            self.config_params
+        ):
+            raise FileNotFoundError("Config_params must be a valid file path")
+
+        if self.strategy is not None and not isinstance(
+            self.strategy, tf.distribute.Strategy
+        ):
+            raise TypeError("Strategy must be keras strategy object")
+        if not isinstance(self.random_seed, int):
+            raise TypeError("Random seed must be an integer")
+        if not isinstance(self.validate_yaml, bool):
+            raise TypeError("Validate yaml must be a boolean value")
+        if self.custom_modules_path is not None:
+            if not isinstance(self.custom_modules_path, str) or not os.path.isfile(
+                self.custom_modules_path
+            ):
+                raise FileNotFoundError(
+                    "Costum modules path must be a valid path string"
+                )
+
+        if self.custom_modules_path:
+            self._import_custom_model(self.custom_modules_path)
+        self._config = self._parse_config()
+        self._accelerator = Accelerator[self.config.accelerator]
+        self._validate_config_file()
+
+        self._callbacks = self._get_callbacks()
+        self._input_shape = self._get_input_shape()
+        self._sample_weight_mode = self._get_sample_weight_mode()
+
+        self._trainer_initialized = True
+
 
 if __name__ == "__main__":
     import numpy as np
@@ -614,8 +618,8 @@ if __name__ == "__main__":
 
     path = "/root/project/yaket/examples/files/trainer.yaml"
 
-    from sklearn.utils.class_weight import compute_sample_weight
     from sklearn.utils import class_weight
+    from sklearn.utils.class_weight import compute_sample_weight
 
     # define your class weights or automatically compute them
 
