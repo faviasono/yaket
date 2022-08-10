@@ -29,8 +29,8 @@ class Accelerator(Enum):
 
 class TrainingModel(BaseModel, extra=Extra.allow):
     autolog: bool = False
-    optimizer: Union[constr(strict=True), conlist(item_type=Any,min_items = 1, max_items = 2)] = 'Adam'
-    optimizer_params: Optional[Dict[str, Any]] = None
+    optimizer: Union[constr(strict=True), conlist(item_type=Dict,min_items = 1, max_items = 2)] = 'Adam'
+    optimizer_params: Optional[Dict[str, Any]] = None # obsolete
     epochs: PositiveInt = 1
     batch_size: PositiveInt = 1  # if format is numpy
     loss: Union[constr(strict=True), Dict[str, Any]]
@@ -38,7 +38,7 @@ class TrainingModel(BaseModel, extra=Extra.allow):
     metrics: Optional[conlist(item_type=Union[str,Dict], min_items=1, unique_items=True)]
     verbose: conint(ge=1, le=2) = 1
     shuffle: bool = True
-    accelerator: Optional[constr(strict=True)] 
+    accelerator: Optional[constr(strict=True)] = 'cpu'
     steps_per_epoch: Optional[PositiveInt] = None
     sample_weight_mode: Optional[constr(strict=True)] = None
 

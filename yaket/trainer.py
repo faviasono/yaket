@@ -48,33 +48,39 @@ class Trainer:
         """Initialize the trainer: check inputs, load custom modules, parse configuration file."""
 
         if not isinstance(self.model, tf.keras.models.Model):
-            raise Exception("model must be keras model")
+            raise TypeError("model must be keras model")
         if isinstance(self.train_dataset, tuple):
             if len(self.train_dataset) <2 or len(self.train_dataset) > 3:
-                raise Exception("train_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
+                raise ValueError("train_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
+            for val in self.train_dataset:
+                if not isinstance(val, np.ndarray):
+                    raise TypeError("train_dataset must be a tuple of numpy arrays")
         if isinstance(self.val_dataset, tuple):
             if len(self.val_dataset) < 2 or len(self.val_dataset) > 3:
-                raise Exception("val_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
-        if not isinstance(self.config_params, str) and not isinstance(self.config_params, dict):
-            raise Exception("Config_params must be a dictionary or a file path")
+                raise ValueError("val_dataset must be a tuple of (x, y) or (x, y, sample_weight)")
+            for val in self.val_dataset:
+                if not isinstance(val, np.ndarray):
+                    raise TypeError("val_dataset must be a tuple of numpy arrays")
+        if not (isinstance(self.config_params, dict) or isinstance(self.config_params, str)):
+            raise TypeError("Config_params must be a dictionary or a file path")
         if isinstance(self.config_params, str) and not os.path.isfile(
             self.config_params
         ):
-            raise Exception("Config_params must be a valid file path")
+            raise FileNotFoundError("Config_params must be a valid file path")
 
         if self.strategy is not None and not isinstance(
             self.strategy, tf.distribute.Strategy
         ):
-            raise Exception("Strategy must be keras strategy object")
+            raise TypeError("Strategy must be keras strategy object")
         if not isinstance(self.random_seed, int):
-            raise Exception("Random seed must be an integer")
+            raise TypeError("Random seed must be an integer")
         if not isinstance(self.validate_yaml, bool):
-            raise Exception("Validate yaml must be a boolean value")
+            raise TypeError("Validate yaml must be a boolean value")
         if self.custom_modules_path is not None:
             if not isinstance(self.custom_modules_path, str) or not os.path.isfile(
                 self.custom_modules_path
             ):
-                raise Exception("Costum modules path must be a valid path string")
+                raise FileNotFoundError("Costum modules path must be a valid path string")
 
         if self.custom_modules_path:
             self._import_custom_model(self.custom_modules_path)
@@ -335,7 +341,7 @@ class Trainer:
             self._get_metrics()
             self._get_loss()
         except Exception as e:
-            raise TypeError(
+            raise ValueError(
                 f"You are using a module not defined in either keras or in the custom script\n Details: {e}"
             )
 
@@ -462,6 +468,7 @@ class Trainer:
                     callbacks.append(self._load_custom_module(name_callback, args))
 
         return callbacks
+        
     def _get_metrics(self) -> List[Union[tf.keras.metrics.Metric, Callable]]:
         """Get the metrics"""
         if self.config.metrics is None:
@@ -537,6 +544,11 @@ if __name__ == "__main__":
     from tensorflow import keras
     from tensorflow.keras import layers
 
+    model = keras.models.Sequential()
+    model.add(layers.Dense(64, activation="relu"))
+
+    trainer_path = '/root/project/yaket/examples/files/03_trainer.yaml'
+    trainer = Trainer(trainer_path, model, train_dataset = (None, None), val_dataset = (None, None))
 
 
     class MyDenseLayer(tf.keras.layers.Layer):
