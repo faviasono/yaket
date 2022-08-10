@@ -8,7 +8,7 @@
 stages:
 - test
 
-unit:trainer:
+unit trainer:
   stage: test 
   tags: AF-RUNNER
   image: tensorflow/tensorflow:2.9.1
