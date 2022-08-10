@@ -10,7 +10,8 @@ stages:
 
 unit_trainer:
   stage: test 
-  tags: AF-RUNNER
+  tags: 
+    - AF-RUNNER
   image: tensorflow/tensorflow:2.9.1
   script:
     - pip install yaket
