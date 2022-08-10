@@ -41,6 +41,7 @@ class Trainer:
     _out_path: str = None
     _user_strategy: bool = False
     _trainer_initialized: bool = False
+    _sample_weight_mode: Optional[str] = None
     
 
     def __post_init__(self):
@@ -78,6 +79,7 @@ class Trainer:
 
         self._callbacks = self._get_callbacks()
         self._input_shape = self._get_input_shape()
+        self._sample_weight_mode = self._get_sample_weight_mode()
 
         self._trainer_initialized = True
 
@@ -166,6 +168,11 @@ class Trainer:
             print(f"Successfully converted to format {format} ")
 
     
+    def _get_sample_weight_mode(self):
+        """Get the sample weight mode from the config file"""
+        if self.config.sample_weight_mode is not None:
+            return self.config.sample_weight_mode
+
 
     def _get_input_shape(self):
         """Get the input shape of input dataset"""
@@ -276,7 +283,7 @@ class Trainer:
         self._metrics = self._get_metrics()
 
         self.model.compile(
-            optimizer=self._optimizer, loss=self._loss, metrics=self._get_metrics()
+            optimizer=self._optimizer, loss=self._loss, metrics=self._get_metrics(), sample_weight_mode = self._sample_weight_mode
         )
 
     def _get_strategy(self):

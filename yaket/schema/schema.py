@@ -38,9 +38,15 @@ class TrainingModel(BaseModel, extra=Extra.allow):
     metrics: Optional[conlist(item_type=Union[str,Dict], min_items=1, unique_items=True)]
     verbose: conint(ge=1, le=2) = 1
     shuffle: bool = True
-    class_weights: Optional[conlist(item_type=Any, min_items=1)] 
     accelerator: Optional[constr(strict=True)] 
     steps_per_epoch: Optional[PositiveInt] = None
+    sample_weight_mode: Optional[constr(strict=True)] = None
+
+    @validator('sample_weight_mode')
+    def sample_weight_mode_validator(cls, v):
+        if v is not None:
+            assert v in ['temporal']
+        return v
 
     @validator('accelerator')
     def accelerator_validator(cls, v):

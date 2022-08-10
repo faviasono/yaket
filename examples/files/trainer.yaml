@@ -27,6 +27,6 @@ callbacks:
 # verbose: 1 # 0, 1, 2 
 # epochs: 1
 # shuffle: False
-class_weights: # First value is boolean
-    - False
+sample_weight_mode: 'temporal'
 accelerator: cpu #Make it optional
+
