@@ -537,11 +537,6 @@ if __name__ == "__main__":
     from tensorflow import keras
     from tensorflow.keras import layers
 
-    model = keras.models.Sequential()
-    model.add(layers.Dense(64, activation="relu"))
-
-    trainer_path = '/root/project/yaket/examples/files/03_trainer.yaml'
-    trainer = Trainer(trainer_path, model, train_dataset = (None, None), val_dataset = (None, None))
 
 
     class MyDenseLayer(tf.keras.layers.Layer):
