@@ -1,0 +1,29 @@
+autolog: False
+optimizer: 
+  - Adam:
+      learning_rate: 0.001
+batch_size: 2048 
+loss: BinaryCrossentropy
+callbacks:
+    - EarlyStopping:
+        monitor: val_prc
+        patience: 10
+        mode: max
+        verbose: 1
+        restore_best_weights: True  
+metrics:
+    - TruePositives
+    - TrueNegatives
+    - FalsePositives
+    - FalseNegatives
+    - Precision
+    - Recall
+    - AUC
+    - AUC:
+        curve: PR
+        name: prc
+verbose: 1
+epochs: 1
+shuffle: False
+accelerator: cpu 
+steps_per_epoch: 1

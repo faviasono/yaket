@@ -366,9 +366,9 @@ class Trainer:
         opt = self.config.optimizer
         if isinstance(opt, List):
             if len(opt) == 1 and isinstance(opt[0], Dict):
-                k = list(opt[1].keys())[0]
-                v = list(opt[1].values())[0]
-                scheduler = getattr(tf.keras.optimizers, k, default_value)
+                k = list(opt[0].keys())[0]
+                v = list(opt[0].values())[0]
+                optimizer = getattr(tf.keras.optimizers, k, default_value)
                 if optimizer != default_value:
                     return optimizer(**opt_pars)
                 else:
@@ -396,7 +396,7 @@ class Trainer:
             if optimizer != default_value:
                 return optimizer(**opt_pars)
             else:
-                    return self._load_custom_module(optimizer, opt_pars)
+                return self._load_custom_module(optimizer, opt_pars)
 
     def _get_loss(self) -> Union[tf.keras.losses.Loss, Callable]:
         """Get the loss from the config file"""
@@ -462,7 +462,6 @@ class Trainer:
                     callbacks.append(self._load_custom_module(name_callback, args))
 
         return callbacks
-
     def _get_metrics(self) -> List[Union[tf.keras.metrics.Metric, Callable]]:
         """Get the metrics"""
         if self.config.metrics is None:
@@ -537,6 +536,12 @@ if __name__ == "__main__":
     import numpy as np
     from tensorflow import keras
     from tensorflow.keras import layers
+
+    model = keras.models.Sequential()
+    model.add(layers.Dense(64, activation="relu"))
+
+    trainer_path = '/root/project/yaket/examples/files/03_trainer.yaml'
+    trainer = Trainer(trainer_path, model, train_dataset = (None, None), val_dataset = (None, None))
 
 
     class MyDenseLayer(tf.keras.layers.Layer):
