@@ -23,6 +23,7 @@ coverage test:
     - pip install pytest pytest-cov
     - pip install -e .
     - coverage run -m pytest tests/tests_trainer.py
+    - coverage report -i
     - coverage xml -i
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
