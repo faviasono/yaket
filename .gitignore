@@ -21,4 +21,4 @@ mymodel/
 tests/test_converter/__pycache__/
 .coverage
 *.pyc
-tests/test_trainer/__pycache__/__init__.cpython-310.pyc
+tests/test_trainer/__pycache__/
