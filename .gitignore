@@ -16,3 +16,4 @@ examples/~/
 dist/
 examples/files/__pycache__/
 tests/__pycache__/
+tests/test_trainer/__pycache__/

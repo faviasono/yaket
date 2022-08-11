@@ -146,7 +146,7 @@ class TestTrainer(unittest.TestCase):
         THEN an error is raised
         """
 
-        opset_list = [2, 'random_string', -1, [1,2]]
+        opset_list = ['random_string', -1, [1,2]]
 
         trainer = Trainer(
                     self.simple_config,
