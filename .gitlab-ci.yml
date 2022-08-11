@@ -13,7 +13,7 @@ unit_trainer:
     reports:
       junit: report.xml
   rules:
-    if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
 coverage test:
   stage: test
@@ -31,5 +31,6 @@ coverage test:
         coverage_format: cobertura
         path: coverage.xml
   rules:
-    if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    
         
