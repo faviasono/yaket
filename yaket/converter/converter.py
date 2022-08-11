@@ -15,13 +15,21 @@ class Converter:
     out_path: Union[str, Path] = "model.onnx"  # model.tflite
     opset_onnx: int = 15
 
-    def _init_converter(self) -> None:
-        if self.out_format not in ["onnx", "tf-lite"]:
+    def __post_init__(self) -> None:
+        if not isinstance(self.opset_onnx, int):
+            raise TypeError("opset_onnx must be an integer")
+        if self.model_path is not None and not (isinstance(self.model_path, Path) or isinstance(self.model_path, str)):
+            raise TypeError("model_path must be a string or a Path object")
+        if self.opset_onnx < 1:
+            raise ValueError("opset_onnx must be a positive integer")
+        if not (isinstance(self.out_format, str) or isinstance(self.out_path, Path)):
+            raise TypeError("out_format must be a string")
+        if self.out_format not in ["onnx", "tflite"]:
             raise ValueError(f"Unknown output format: {self.out_format}")
         if self.model is not None and not isinstance(self.model, tf.keras.Model):
-            raise ValueError(f"Model must be a tf.keras.Model, got {type(self.model)}")
-        if not isinstance(self.out_path, str) or not isinstance(self.out_path, Path):
-            raise ValueError(
+            raise TypeError(f"Model must be a tf.keras.Model, got {type(self.model)}")
+        if not (isinstance(self.out_path, str) or isinstance(self.out_path, Path)):
+            raise TypeError(
                 f"Output path must be a string or Path type, got {type(self.out_path)}"
             )
 
