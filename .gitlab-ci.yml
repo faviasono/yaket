@@ -22,7 +22,7 @@ coverage test:
   script:
     - pip install pytest pytest-cov
     - pip install -e .
-    - coverage run -m pytest tests
+    - coverage run --omit=/usr/* -m pytest tests
     - coverage report -i
     - coverage xml -i
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
