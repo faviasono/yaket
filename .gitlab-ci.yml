@@ -27,7 +27,8 @@ run tests:
   image: tensorflow/tensorflow:2.9.1
   script:
     - pip install pytest pytest-cov
-    - coverage run -m pytest
+    - pip install -e .
+    - coverage run -m pytest tests/tests_trainer.py
     - coverage report
     - coverage xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
