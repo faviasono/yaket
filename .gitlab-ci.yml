@@ -10,8 +10,6 @@ stages:
 
 unit_trainer:
   stage: test 
-  tags: 
-    - AF-RUNNER
   image: tensorflow/tensorflow:2.9.1
   script:
     - pip install pytest
@@ -22,22 +20,20 @@ unit_trainer:
     reports:
       junit: report.xml
 
-coverage:
+  #if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+
+run tests:
   stage: test
-  image:  tensorflow/tensorflow:2.9.1
+  image: tensorflow/tensorflow:2.9.1
   script:
     - pip install pytest pytest-cov
-    - coverage run -m pytest tests/tests_trainer.py 
+    - coverage run -m pytest
     - coverage report
     - coverage xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-    artifacts:
+  artifacts:
     reports:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
-
-
-
-  #if: $CI_PIPELINE_SOURCE == 'merge_request_event'
         
