@@ -13,7 +13,7 @@ import tensorflow as tf
 
 from yaket.converter.converter import Converter
 from yaket.schema.schema import Accelerator, TrainingModel, yaml_to_pydantic
-
+import platform
 
 @dataclass
 class Trainer:
@@ -117,7 +117,7 @@ class Trainer:
 
         Args
         ----
-        format: str
+        format_model: str
             Format to convert the model to. Available formats: onnx, tflite
         model_path: str
             Path to the model to convert.
@@ -128,6 +128,15 @@ class Trainer:
             It might be not available with some platforms.
 
         """
+        if not isinstance(format_model, str):
+            raise TypeError("format_model must be a string")
+        if not isinstance(output_path, str):
+            raise TypeError("output_path must be a string")
+        if not isinstance(from_command_line, bool):
+            raise TypeError("from_command_line must be a boolean")
+        if not isinstance(opset_onnx, int) or (isinstance(opset_onnx, int) and opset_onnx < 1):
+            raise TypeError("opset_onnx must be a positive integer")
+
         if from_command_line and self._out_path is None:
             raise Exception(
                 "You need to have a saved model before converting using command line"
@@ -279,6 +288,12 @@ class Trainer:
     @staticmethod
     def get_free_gpu_idx():
         """Get the index of the freer GPU"""
+        if platform.system == "Windows":
+            raise Exception("GPU not supported on Windows")
+        gpus = tf.config.experimental.list_physical_devices("GPU")
+        if len(gpus) == 0:
+            raise Exception("No GPU available")
+
         command = "nvidia-smi --query-gpu=memory.free --format=csv"
         memory_free_info = (
             sp.check_output(command.split()).decode("ascii").split("\n")[:-1][1:]
@@ -473,9 +488,11 @@ class Trainer:
 
     def _set_randomness(self, random_seed: Optional[int] = None) -> None:
         """Set the randomness"""
+        if (not isinstance(random_seed, int)) or (isinstance(random_seed, int) and random_seed < 0):
+            raise ValueError("random_seed must be a positive integer")
         if random_seed is not None:
             if tf.__version__ >= "2.9.0":
-                tf.keras.set_random_seed(random_seed)
+                tf.random.set_seed(random_seed)
                 tf.config.experimental.enable_op_determinism()
             else:
                 tf.random.set_seed(random_seed)
@@ -493,6 +510,8 @@ class Trainer:
 
     def summary_model(self):
         """Summary of the model"""
+        if self.model is None:
+            raise ValueError("Model not found. Please initialize the Trainer first")
         self.model.summary()
 
     def __post_init__(self):
