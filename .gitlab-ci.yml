@@ -2,17 +2,17 @@
 stages:
 - test
 
-# unit_trainer:
-#   stage: test 
-#   image: tensorflow/tensorflow:2.9.1
-#   script:
-#     - pip install pytest
-#     - pip install -e . 
-#     - pytest tests/tests_trainer.py --junitxml=report.xml
-#   artifacts:
-#     when: always
-#     reports:
-#       junit: report.xml
+unit_trainer:
+  stage: test 
+  image: tensorflow/tensorflow:2.9.1
+  script:
+    - pip install pytest
+    - pip install -e . 
+    - pytest tests/tests_trainer.py --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
 
   #if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
