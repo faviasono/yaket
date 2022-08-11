@@ -1,36 +1,29 @@
-# You can override the included template(s) by including variable overrides
-# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
-# Secret Detection customization: https://docs.gitlab.com/ee/user/application_security/secret_detection/#customizing-settings
-# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
-# Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
-# Note that environment variables can be set in several places
-# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
+
 stages:
 - test
 
-unit_trainer:
-  stage: test 
-  image: tensorflow/tensorflow:2.9.1
-  script:
-    - pip install pytest
-    - pip install -e . 
-    - pytest tests/tests_trainer.py --junitxml=report.xml
-  artifacts:
-    when: always
-    reports:
-      junit: report.xml
+# unit_trainer:
+#   stage: test 
+#   image: tensorflow/tensorflow:2.9.1
+#   script:
+#     - pip install pytest
+#     - pip install -e . 
+#     - pytest tests/tests_trainer.py --junitxml=report.xml
+#   artifacts:
+#     when: always
+#     reports:
+#       junit: report.xml
 
   #if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
-run tests:
+coverage test:
   stage: test
   image: tensorflow/tensorflow:2.9.1
   script:
     - pip install pytest pytest-cov
     - pip install -e .
     - coverage run -m pytest tests/tests_trainer.py
-    - coverage report
-    - coverage xml
+    - coverage xml -i
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     reports:
