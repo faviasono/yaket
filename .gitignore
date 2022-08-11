@@ -16,3 +16,7 @@ examples/~/
 dist/
 examples/files/__pycache__/
 tests/__pycache__/
+tests/test_trainer/__pycache__/
+mymodel/
+tests/test_converter/__pycache__/
+.coverage

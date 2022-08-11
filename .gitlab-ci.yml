@@ -8,7 +8,7 @@ unit_trainer:
   script:
     - pip install pytest
     - pip install -e . 
-    - pytest tests/tests_trainer.py --junitxml=report.xml
+    - pytest tests --junitxml=report.xml
   artifacts:
     when: always
     reports:
@@ -22,7 +22,7 @@ coverage test:
   script:
     - pip install pytest pytest-cov
     - pip install -e .
-    - coverage run -m pytest tests/tests_trainer.py
+    - coverage run --omit=/usr/* -m pytest tests
     - coverage report -i
     - coverage xml -i
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
