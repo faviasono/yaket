@@ -1,6 +1,6 @@
 import tf2onnx
 import tensorflow as tf
-from typing import List, Optional, Tuple, Union, Any, Dict, Callable
+from typing import  Optional, Union
 from dataclasses import dataclass
 from pathlib import Path
 import subprocess
@@ -9,6 +9,22 @@ import sys
 
 @dataclass
 class Converter:
+    """
+    This class is used to convert a keras model to onnx or tflite.
+
+    Parameters
+    ----------
+    model_path :  Path to the model to convert. If None, the model must be provided.
+    model : tf.keras.Model. If None, the model path must be provided.
+    out_path : Path to the output file.
+    out_format : Output format. Can be either "onnx" or "tflite".
+    opset_onnx : Opset version for the onnx model. Default is 11.
+
+    Methods
+    -------
+    convert() : Convert the model to the specified format.
+    """
+
     out_format: Union[str, Path]
     model: Optional[tf.keras.Model] = None
     model_path: Optional[Union[str, Path]] = None
@@ -34,6 +50,7 @@ class Converter:
             )
 
     def convert(self) -> bool:
+        "Convert the model to the specified format"
         if self.out_format == "onnx":
             self._convert_to_onnx()
             return True
@@ -44,8 +61,7 @@ class Converter:
             raise ValueError(f"Unknown output format: {self.out_format}")
 
     def _convert_to_onnx(self):
-        "Function to convert a keras model to onnx using command line"
-        # submit command to command line
+        "Function to convert a keras model to onnx"
 
         if not self.out_path.endswith(".onnx"):
             self.out_path = self.out_path + ".onnx"
@@ -75,6 +91,7 @@ class Converter:
             raise e
 
     def _convert_to_tflite(self):
+        "Function to convert a keras model to tflite"
 
         if self.model is None:
             tf_converter = tf.lite.TFLiteConverter.from_saved_model(

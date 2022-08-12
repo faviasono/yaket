@@ -22,29 +22,14 @@ class Trainer:
     
     Args
     ----
-    config_params : Union[Dict, str]
-        Dictionary or path to YAML config file
-    model : tf.keras.Model
-        Model to train
-    train_dataset : Union[
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[np.ndarray, np.ndarray, np.ndarray],
-        tf.data.Dataset,
-    ]
-        Training dataset
-    val_dataset : Union[
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[np.ndarray, np.ndarray, np.ndarray],
-        tf.data.Dataset,
-    ]
-    strategy : Optional[tf.distribute.Strategy]
-        Strategy to use for training (default None)
-    random_seed : int
-        Random seed to use for reproducibility
-    custom_modules_path: Optional[str]
-        Path to the script with custom modules to use for training (default None)
-    validate_yaml: bool
-        Whether or not to validate the YAML config file (default True)
+    config_params : Dictionary or path to YAML config file
+    model : Model to train
+    train_dataset : Training dataset
+    val_dataset : Validation dataset
+    strategy :  Strategy to use for training (default None)
+    random_seed :  Random seed to use for reproducibility
+    custom_modules_path: Path to the script with custom modules to use for training (default None)
+    validate_yaml:  Whether or not to validate the YAML config file (default True)
 
     Methods
     -------
@@ -63,6 +48,7 @@ class Trainer:
     list_available_tf_modules(options: str)
         List all available TensorFlow modules for Optimizers, Losses, and Metrics in tensorflow.keras
     """
+
     config_params: Union[Dict, str]
     model: tf.keras.Model
     train_dataset: Union[
@@ -99,18 +85,16 @@ class Trainer:
 
     # __post_init__ is called after the __init__ function automatically
 
-    def train(self, epochs: int = None):
+    def train(self, epochs: int = None) -> Dict[str, Any]:
         """Train the model. Main function to call.
 
         Args
         ----
-        epochs: int, optional
-            Number of epochs to train. If None, will train with the number of epochs specified in the config file.
+        epochs:  Number of epochs to train. If None, will train with the number of epochs specified in the config file.
         
         Returns
         -------
-        history: Dict[str, Any]
-            History of the training process
+        History of the training process
 
         """
 
@@ -168,15 +152,10 @@ class Trainer:
 
         Args
         ----
-        format_model: str
-            Format to convert the model to. Available formats: onnx, tflite
-        model_path: str
-            Path to the model to convert.
-        output_path: str
-            Path to the output file.
-        from_command_line: bool
-            Whether or not to convert the model using the command line.
-            It might be not available with some platforms.
+        format_model:  Format to convert the model to. Available formats: onnx, tflite
+        model_path:  Path to the model to convert.
+        output_path: Path to the output file.
+        from_command_line: Whether or not to convert the model using the command line.
 
         Raises
         ------
@@ -265,7 +244,7 @@ class Trainer:
         except NotImplementedError:  # there's custom layer
             raise
 
-    def _get_x_y_val(self, batch_size):
+    def _get_x_y_val(self, batch_size: int) -> tf.data.Dataset:
         """Get the x and y for training based on the format of the dataset"""
 
         options = tf.data.Options()
@@ -285,7 +264,7 @@ class Trainer:
             )
             return val
 
-    def _get_x_y_train(self, batch_size):
+    def _get_x_y_train(self, batch_size: int) -> tf.data.Dataset:
         """Get the x and y for training based on the format of the dataset"""
 
         options = tf.data.Options()
@@ -328,7 +307,7 @@ class Trainer:
             sample_weight_mode=self._sample_weight_mode,
         )
 
-    def _get_strategy(self):
+    def _get_strategy(self) -> tf.distribute.Strategy:
         """Get the strategy for the model"""
 
         if self.strategy is None:
@@ -351,7 +330,7 @@ class Trainer:
             return self.strategy
 
     @staticmethod
-    def get_free_gpu_idx():
+    def get_free_gpu_idx() -> int:
         """
         Get the index of the freer GPU
 
@@ -363,7 +342,7 @@ class Trainer:
         
         Returns
         -------
-            int: index of the freer GPU
+        Index of the freer GPU
         """
 
         if platform.system == "Windows":
@@ -553,14 +532,13 @@ class Trainer:
         return list_metrics
 
     @staticmethod
-    def list_available_tf_modules(option: str):
+    def list_available_tf_modules(option: str) -> List[str]:
         """
         List available optimizers, losses, and metrics in tf.keras
 
         Args
         ----
-        option: str
-            The option to list. It can be "optimizers", "losses", or "metrics"
+        option: The option to list. It can be "optimizers", "losses", or "metrics"
         
         Raises
         ------
@@ -569,8 +547,7 @@ class Trainer:
         
         Returns
         -------
-        List[str]
-            The list of available options from tf.keras
+        The list of available options from tf.keras
         """
 
         options_func = {
@@ -582,12 +559,12 @@ class Trainer:
         modules = [value for value in dir(options_func[option]) if value[0].isupper()]
         return modules
 
-    def _clean_workspace(self) -> None:
+    def _clean_workspace(self):
         """Clean the workspace"""
 
         tf.keras.backend.clear_session()
 
-    def _autolog(self) -> None:
+    def _autolog(self):
         """Autolog the model using MLFlow"""
 
         if self.config.autolog:
@@ -613,8 +590,7 @@ class Trainer:
 
         Args
         ----
-        clear_model: bool
-            If True, the model will be deleted from the Trainer class
+        clear_model: If True, the model will be deleted from the Trainer class
         """
 
         if clear_model:

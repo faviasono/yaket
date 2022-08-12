@@ -14,6 +14,8 @@ from enum import Enum, auto
 
 
 class Accelerator(Enum):
+    """Enum for accelerator types."""
+
     cpu = auto()
     gpu = auto()
     mgpu = auto()
@@ -29,6 +31,8 @@ class Accelerator(Enum):
 
 
 class TrainingModel(BaseModel, extra=Extra.allow):
+    """Pydantic model for YAKET Trainer."""
+
     autolog: bool = False
     optimizer: Union[
         constr(strict=True), conlist(item_type=Dict, min_items=1, max_items=2)
@@ -67,6 +71,20 @@ class TrainingModel(BaseModel, extra=Extra.allow):
 
 
 def yaml_to_pydantic(path: str, validate: bool) -> TrainingModel:
+    """
+    Load YAML file and convert it to a Pydantic model.
+
+    Args
+    ----
+        path: Path to YAML file.
+        validate: Validate the YAML file.
+
+    Returns
+    -------
+        Pydantic model for TrainingModel.
+    """
+
+    
     if not os.path.exists(path=path):
         raise FileNotFoundError(f"{path} not found")
     if os.path.isfile(path) and path.endswith(".yaml"):
