@@ -74,13 +74,11 @@ def yaml_to_pydantic(path: str, validate: bool) -> TrainingModel:
     """
     Load YAML file and convert it to a Pydantic model.
 
-    Args
-    ----
+    Args:
         path: Path to YAML file.
         validate: Validate the YAML file.
 
-    Returns
-    -------
+    Returns:
         Pydantic model for TrainingModel.
     """
 

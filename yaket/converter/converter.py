@@ -12,17 +12,15 @@ class Converter:
     """
     This class is used to convert a keras model to onnx or tflite.
 
-    Parameters
-    ----------
-    model_path :  Path to the model to convert. If None, the model must be provided.
-    model : tf.keras.Model. If None, the model path must be provided.
-    out_path : Path to the output file.
-    out_format : Output format. Can be either "onnx" or "tflite".
-    opset_onnx : Opset version for the onnx model. Default is 11.
+    Parameters:
+        model_path (str|Path):  Path to the model to convert. If None, the model must be provided.
+        model (tf.keras.Model):  If None, the model path must be provided.
+        out_path (str|Path): Path to the output file.
+        out_format (str|Path): Output format. Can be either "onnx" or "tflite".
+        opset_onnx (int):  Opset version for the onnx model. Default is 11.
 
-    Methods
-    -------
-    convert() : Convert the model to the specified format.
+    Methods:
+        convert() - Convert the model to the specified format.
     """
 
     out_format: Union[str, Path]
@@ -51,6 +49,7 @@ class Converter:
 
     def convert(self) -> bool:
         "Convert the model to the specified format"
+
         if self.out_format == "onnx":
             self._convert_to_onnx()
             return True

@@ -20,33 +20,23 @@ class Trainer:
     """
     A class to train a model using YAML config file
     
-    Args
-    ----
-    config_params : Dictionary or path to YAML config file
-    model : Model to train
-    train_dataset : Training dataset
-    val_dataset : Validation dataset
-    strategy :  Strategy to use for training (default None)
-    random_seed :  Random seed to use for reproducibility
-    custom_modules_path: Path to the script with custom modules to use for training (default None)
-    validate_yaml:  Whether or not to validate the YAML config file (default True)
+    Args:
+        config_params (Dict | str): Dictionary or path to YAML config file
+        model (tf.keras.Model): Model to train
+        train_dataset (Tuple | tf.data.Dataset): Training dataset 
+        val_dataset (Tuple | tf.data.Dataset): Validation dataset
+        strategy (Optional[tf.distribute.Strategy]):  Strategy to use for training (default None)
+        random_seed (int):  Random seed to use for reproducibility
+        custom_modules_path (str|Path): Path to the script with custom modules to use for training (default None)
+        validate_yaml (bool):  Whether or not to validate the YAML config file (default True)
 
-    Methods
-    -------
-    train(epochs: Optional[int] = None)
-        Train the model with configuration. Epochs in YAML can be overridden. Main function to call.
-    convert_model(format_model: str = "onnx", opset_onnx: int = 15, output_path: str = "model", from_command_line: bool = True)
-        Convert the model to a different format. Available formats:
-        - onnx
-        - tflite
-    validate_config()
-        Validate again the configuration file. Usefult to use after chaning the config parameters.
-    clear_ram()
-        Clear RAM memory. Usefult after training and during hyperparameter tuning.
-    get_free_gpu_idx()
-        Get the index of the free GPU. It uses nvidia-smi and it works only on Linux with GPU.
-    list_available_tf_modules(options: str)
-        List all available TensorFlow modules for Optimizers, Losses, and Metrics in tensorflow.keras
+    Methods:
+        - train(epochs) - Main function to call. Return history trained model
+        - convert_model(format_model, opset_onnx, output_path, from_command_line) - Convert the model to a different format. Available formats: onnx, tflite
+        - validate_config() - Validate again the configuration file. Usefult to use after chaning the config parameters.
+        - clear_ram() - Clear RAM
+        - get_free_gpu_idx() - Get the index of the free GPU. It uses nvidia-smi and it works only on Linux with GPU.
+        - list_available_tf_modules(options) - List available TensorFlow modules for  Optimizers, Losses, and Metrics
     """
 
     config_params: Union[Dict, str]
@@ -62,7 +52,7 @@ class Trainer:
         tf.data.Dataset,
     ] = None
     strategy: Optional[tf.distribute.Strategy] = None
-    random_seed: int = 1234
+    random_seed : int = 1234
     validate_yaml: bool = True
     custom_modules_path: Optional[str] = None
 
@@ -88,13 +78,11 @@ class Trainer:
     def train(self, epochs: int = None) -> Dict[str, Any]:
         """Train the model. Main function to call.
 
-        Args
-        ----
-        epochs:  Number of epochs to train. If None, will train with the number of epochs specified in the config file.
+        Args:
+            epochs:  Number of epochs to train. If None, will train with the number of epochs specified in the config file.
         
-        Returns
-        -------
-        History of the training process
+        Returns:
+            History of the training process
 
         """
 
@@ -146,23 +134,21 @@ class Trainer:
         from_command_line: bool = True,
     ):
 
-        """Convert the model to a different format. Available formats:
+        """
+        Convert the model to a different format. Available formats:
         1. ONNX
         2. TensorFlow Lite
 
-        Args
-        ----
-        format_model:  Format to convert the model to. Available formats: onnx, tflite
-        model_path:  Path to the model to convert.
-        output_path: Path to the output file.
-        from_command_line: Whether or not to convert the model using the command line.
+        Args:
+            
+            format_model:  Format to convert the model to. Available formats: onnx, tflite
+            opset_onnx:  Opset to use for the ONNX model (default 15)
+            output_path:  Path to save the converted model (default model)
+            from_command_line:  Whether or not to convert the model from the command line (default True)
 
-        Raises
-        ------
-        TypeError
-            If format_model, output_path, from_command_line, and opset_onnx are not of the correct type.
-        NotImplementedError
-            If from_command_line is True but the model has not been saved.
+        Raises:
+            TypeError: If format_model, output_path, from_command_line, and opset_onnx are not of the correct type.
+            NotImplementedError: If from_command_line is True but the model has not been saved.
         """
 
         if not isinstance(format_model, str):
@@ -334,15 +320,12 @@ class Trainer:
         """
         Get the index of the freer GPU
 
-        Raises
-        ------
-        Exception
-            If no GPU is available or system is not Linux
+        Raises:
+            Exception: If no GPU is available or system is not Linux
 
         
-        Returns
-        -------
-        Index of the freer GPU
+        Returns:        
+            Index of the freer GPU
         """
 
         if platform.system == "Windows":
@@ -536,18 +519,14 @@ class Trainer:
         """
         List available optimizers, losses, and metrics in tf.keras
 
-        Args
-        ----
-        option: The option to list. It can be "optimizers", "losses", or "metrics"
+        Args:
+            option: The option to list. It can be "optimizers", "losses", or "metrics"
         
-        Raises
-        ------
-        AssertionError
-            If the option is not one of the three options
+        Raises:
+            AssertionError: if the option is not one of "optimizers", "losses", or "metrics"
         
-        Returns
-        -------
-        The list of available options from tf.keras
+        Returns:
+            The list of available options from tf.keras
         """
 
         options_func = {
@@ -588,9 +567,8 @@ class Trainer:
         """
         Clear ram after deleting model and all datasets saved in the Trainer class
 
-        Args
-        ----
-        clear_model: If True, the model will be deleted from the Trainer class
+        Args:
+            clear_model: If True, the model will be deleted from the Trainer class
         """
 
         if clear_model:
