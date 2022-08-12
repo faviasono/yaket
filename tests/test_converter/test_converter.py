@@ -30,6 +30,17 @@ class TestConverter(tf.test.TestCase):
                 with self.assertRaises(TypeError):
                     c = Converter(out_format=out_format)
 
+    def test_init_convert_wrong_type_onnx(self):
+        """
+        GIVEN a Converter correctly initialized with onnx out_format
+        WHEN the convert method is called with a wrong type
+        THEN the model should raise an exception
+        """ 
+        out_format = 'onnx'
+        opset_onnx = 'ciao'
+        
+        with self.assertRaises(TypeError):
+            Converter(out_format=out_format, opset_onnx=opset_onnx)
 
     def test_init_converter_wrong_opset_onnx(self):
         """
