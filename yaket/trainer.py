@@ -17,6 +17,52 @@ import platform
 
 @dataclass
 class Trainer:
+    """
+    A class to train a model using YAML config file
+    
+    Args
+    ----
+    config_params : Union[Dict, str]
+        Dictionary or path to YAML config file
+    model : tf.keras.Model
+        Model to train
+    train_dataset : Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        tf.data.Dataset,
+    ]
+        Training dataset
+    val_dataset : Union[
+        Tuple[np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        tf.data.Dataset,
+    ]
+    strategy : Optional[tf.distribute.Strategy]
+        Strategy to use for training (default None)
+    random_seed : int
+        Random seed to use for reproducibility
+    custom_modules_path: Optional[str]
+        Path to the script with custom modules to use for training (default None)
+    validate_yaml: bool
+        Whether or not to validate the YAML config file (default True)
+
+    Methods
+    -------
+    train(epochs: Optional[int] = None)
+        Train the model with configuration. Epochs in YAML can be overridden. Main function to call.
+    convert_model(format_model: str = "onnx", opset_onnx: int = 15, output_path: str = "model", from_command_line: bool = True)
+        Convert the model to a different format. Available formats:
+        - onnx
+        - tflite
+    validate_config()
+        Validate again the configuration file. Usefult to use after chaning the config parameters.
+    clear_ram()
+        Clear RAM memory. Usefult after training and during hyperparameter tuning.
+    get_free_gpu_idx()
+        Get the index of the free GPU. It uses nvidia-smi and it works only on Linux with GPU.
+    list_available_tf_modules(options: str)
+        List all available TensorFlow modules for Optimizers, Losses, and Metrics in tensorflow.keras
+    """
     config_params: Union[Dict, str]
     model: tf.keras.Model
     train_dataset: Union[
@@ -60,6 +106,11 @@ class Trainer:
         ----
         epochs: int, optional
             Number of epochs to train. If None, will train with the number of epochs specified in the config file.
+        
+        Returns
+        -------
+        history: Dict[str, Any]
+            History of the training process
 
         """
 
@@ -127,7 +178,14 @@ class Trainer:
             Whether or not to convert the model using the command line.
             It might be not available with some platforms.
 
+        Raises
+        ------
+        TypeError
+            If format_model, output_path, from_command_line, and opset_onnx are not of the correct type.
+        NotImplementedError
+            If from_command_line is True but the model has not been saved.
         """
+
         if not isinstance(format_model, str):
             raise TypeError("format_model must be a string")
         if not isinstance(output_path, str):
@@ -138,7 +196,7 @@ class Trainer:
             raise TypeError("opset_onnx must be a positive integer")
 
         if from_command_line and self._out_path is None:
-            raise Exception(
+            raise NotImplementedError(
                 "You need to have a saved model before converting using command line"
             )
         model_to_convert = self.model if not from_command_line else None
@@ -154,11 +212,13 @@ class Trainer:
 
     def _get_sample_weight_mode(self):
         """Get the sample weight mode from the config file"""
+
         if self.config.sample_weight_mode is not None:
             return self.config.sample_weight_mode
 
     def _get_input_shape(self):
         """Get the input shape of input dataset"""
+
         if isinstance(self.train_dataset, tf.data.Dataset):
             for x, y in self.train_dataset.take(1):
                 self.input_shape = (None, *x.shape[1:])
@@ -191,7 +251,8 @@ class Trainer:
             self.model.save_weights(self._out_path, save_format="tf")
 
     def _clone_model(self):
-        """Clone the model so that it works within tf.distribute.Strategy
+        """
+        Clone the model so that it works within tf.distribute.Strategy
         It works only for models not using custom objects
         """
 
@@ -206,6 +267,7 @@ class Trainer:
 
     def _get_x_y_val(self, batch_size):
         """Get the x and y for training based on the format of the dataset"""
+
         options = tf.data.Options()
         options.experimental_distribute.auto_shard_policy = (
             tf.data.experimental.AutoShardPolicy.OFF
@@ -225,6 +287,7 @@ class Trainer:
 
     def _get_x_y_train(self, batch_size):
         """Get the x and y for training based on the format of the dataset"""
+
         options = tf.data.Options()
         options.experimental_distribute.auto_shard_policy = (
             tf.data.experimental.AutoShardPolicy.OFF
@@ -266,6 +329,8 @@ class Trainer:
         )
 
     def _get_strategy(self):
+        """Get the strategy for the model"""
+
         if self.strategy is None:
             if self._accelerator is None:
                 return tf.distribute.MirroredStrategy()
@@ -287,7 +352,20 @@ class Trainer:
 
     @staticmethod
     def get_free_gpu_idx():
-        """Get the index of the freer GPU"""
+        """
+        Get the index of the freer GPU
+
+        Raises
+        ------
+        Exception
+            If no GPU is available or system is not Linux
+
+        
+        Returns
+        -------
+            int: index of the freer GPU
+        """
+
         if platform.system == "Windows":
             raise Exception("GPU not supported on Windows")
         gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -302,6 +380,8 @@ class Trainer:
         return int(np.argmin(memory_free_values))
 
     def _parse_config(self) -> Any:
+        """Parse the config file"""
+
         if isinstance(self.config_params, str):
             return yaml_to_pydantic(self.config_params, self.validate_yaml)
         if isinstance(self.config_params, dict):
@@ -309,6 +389,7 @@ class Trainer:
 
     def _validate_config_file(self):
         "Validate existence of the loss, optimizer and callbacks defined in the config file"
+
         try:
             self._get_optimizer()
             self._get_metrics()
@@ -319,6 +400,8 @@ class Trainer:
             )
 
     def _import_custom_model(self, module_name: str):
+        """Import the custom model from the custom script"""
+
         try:
             custom_dirpath = os.path.dirname(module_name)
             sys.path.append(custom_dirpath)
@@ -330,6 +413,8 @@ class Trainer:
     def _load_custom_module(
         self, module_name: str, params: Optional[Dict] = None
     ) -> Callable:
+        """Load the custom model from the custom script"""
+        
         try:
             if params is None:
                 return getattr(self._custom_module, module_name)
@@ -340,6 +425,7 @@ class Trainer:
 
     def _get_optimizer(self) -> tf.keras.optimizers.Optimizer:
         """Get the optimizer from the config file"""
+        
         default_value = "not_found"
         opt_pars = dict()
         opt = self.config.optimizer
@@ -400,6 +486,7 @@ class Trainer:
 
     def _get_callbacks(self) -> List[tf.keras.callbacks.Callback]:
         """Get the callbacks from the config file"""
+
         if self.config.callbacks is None:
             return None
         callbacks = []
@@ -443,6 +530,7 @@ class Trainer:
 
     def _get_metrics(self) -> List[Union[tf.keras.metrics.Metric, Callable]]:
         """Get the metrics"""
+
         if self.config.metrics is None:
             return None
 
@@ -466,7 +554,25 @@ class Trainer:
 
     @staticmethod
     def list_available_tf_modules(option: str):
-        """List available optimizers, losses, and metrics in tf.keras"""
+        """
+        List available optimizers, losses, and metrics in tf.keras
+
+        Args
+        ----
+        option: str
+            The option to list. It can be "optimizers", "losses", or "metrics"
+        
+        Raises
+        ------
+        AssertionError
+            If the option is not one of the three options
+        
+        Returns
+        -------
+        List[str]
+            The list of available options from tf.keras
+        """
+
         options_func = {
             "optimizers": tf.keras.optimizers,
             "losses": tf.keras.losses,
@@ -478,16 +584,19 @@ class Trainer:
 
     def _clean_workspace(self) -> None:
         """Clean the workspace"""
+
         tf.keras.backend.clear_session()
 
     def _autolog(self) -> None:
         """Autolog the model using MLFlow"""
+
         if self.config.autolog:
             mlflow.tensorflow.autolog(log_models=True, disable=False)
             self._log = True
 
     def _set_randomness(self, random_seed: Optional[int] = None) -> None:
         """Set the randomness"""
+
         if (not isinstance(random_seed, int)) or (isinstance(random_seed, int) and random_seed < 0):
             raise ValueError("random_seed must be a positive integer")
         if random_seed is not None:
@@ -499,7 +608,15 @@ class Trainer:
                 np.random.seed(random_seed)
 
     def clear_ram(self, clear_model: bool = True):
-        "Delete model and all datasets saved in the Trainer class"
+        """
+        Clear ram after deleting model and all datasets saved in the Trainer class
+
+        Args
+        ----
+        clear_model: bool
+            If True, the model will be deleted from the Trainer class
+        """
+
         if clear_model:
             del self.model
         if self.train_dataset is not None:
@@ -510,6 +627,7 @@ class Trainer:
 
     def summary_model(self):
         """Summary of the model"""
+
         if self.model is None:
             raise ValueError("Model not found. Please initialize the Trainer first")
         self.model.summary()
@@ -571,96 +689,3 @@ class Trainer:
         self._sample_weight_mode = self._get_sample_weight_mode()
 
         self._trainer_initialized = True
-
-
-if __name__ == "__main__":
-    import numpy as np
-    from tensorflow import keras
-    from tensorflow.keras import layers
-
-    model = keras.models.Sequential()
-    model.add(layers.Dense(64, activation="relu"))
-
-    trainer_path = "/root/project/yaket/examples/files/03_trainer.yaml"
-    trainer = Trainer(
-        trainer_path, model, train_dataset=(None, None), val_dataset=(None, None)
-    )
-
-    class MyDenseLayer(tf.keras.layers.Layer):
-        def __init__(self, num_outputs):
-            super(MyDenseLayer, self).__init__()
-            self.num_outputs = num_outputs
-
-        def build(self, input_shape):
-            self.kernel = self.add_weight(
-                "kernel", shape=[int(input_shape[-1]), self.num_outputs]
-            )
-
-        def call(self, inputs):
-            return tf.matmul(inputs, self.kernel)
-
-    # Model / data parameters
-    num_classes = 10
-    input_shape = (28, 28, 1)
-
-    # Load the data and split it between train and test sets
-    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-
-    # Scale images to the [0, 1] range
-    x_train = x_train.astype("float32") / 255
-    x_test = x_test.astype("float32") / 255
-    # Make sure images have shape (28, 28, 1)
-    x_train = np.expand_dims(x_train, -1)
-    x_test = np.expand_dims(x_test, -1)
-    print("x_train shape:", x_train.shape)
-    print(x_train.shape[0], "train samples")
-    print(x_test.shape[0], "test samples")
-
-    # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
-
-    model = keras.Sequential(
-        [
-            keras.Input(shape=input_shape),
-            layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
-            layers.MaxPooling2D(pool_size=(2, 2)),
-            layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-            layers.MaxPooling2D(pool_size=(2, 2)),
-            layers.Flatten(),
-            layers.Dropout(0.5),
-            layers.Dense(num_classes, activation="softmax"),
-        ]
-    )
-
-    model.summary()
-
-    path = "/root/project/yaket/examples/files/trainer.yaml"
-
-    from sklearn.utils import class_weight
-    from sklearn.utils.class_weight import compute_sample_weight
-
-    # define your class weights or automatically compute them
-
-    yargmax = np.argmax(y_train, axis=1)
-    class_weights = class_weight.compute_class_weight(
-        "balanced", classes=np.unique(yargmax.flatten()), y=yargmax.flatten()
-    )
-    class_weight_dict = dict(enumerate(class_weights))
-
-    # compute the sample weights
-    sample_weigth = compute_sample_weight(class_weight_dict, yargmax.flatten()).reshape(
-        yargmax.shape
-    )
-    print(y_train.shape, sample_weigth.shape, x_train.shape)
-
-    trainer = Trainer(
-        config_params=path,
-        train_dataset=(x_train, y_train, sample_weigth),
-        val_dataset=(x_test, y_test),
-        model=model,
-        strategy=None,
-    )
-    trainer.train(1)
-
-    trainer.clear_ram()
