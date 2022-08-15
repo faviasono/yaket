@@ -222,9 +222,10 @@ class TestTrainer(unittest.TestCase):
         THEN an error is raised
         """
 
-        dev_dataset = [range(10), range(10)]
+        dev_dataset = 'string'
 
-        with self.assertRaises(Exception):
+        
+        with self.assertRaises(TypeError):
             Trainer(
                 self.simple_config,
                 self.simple_model,
