@@ -11,4 +11,4 @@ This package requires the following modules:
 
 from .trainer import Trainer
 
-__version__ = "1.3.3"
+__version__ = "1.3.4"
