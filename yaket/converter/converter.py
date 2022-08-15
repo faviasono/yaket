@@ -56,8 +56,6 @@ class Converter:
         elif self.out_format == "tflite":
             self._convert_to_tflite()
             return True
-        else:
-            raise ValueError(f"Unknown output format: {self.out_format}")
 
     def _convert_to_onnx(self):
         "Function to convert a keras model to onnx"
