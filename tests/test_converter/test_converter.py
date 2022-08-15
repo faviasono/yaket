@@ -17,6 +17,21 @@ class TestConverter(tf.test.TestCase):
         ]           
     )
 
+    def test_init_converter_wrong_out_path(self):
+        """
+        GIVEN an out_path invalid parameter
+        WHEN the converter is initialized
+        THEN the converter should raise an exception
+        """ 
+        out_format = 'onnx'
+        out_paths = [[1,2], (3,2), 1]
+
+        for out_path in out_paths:
+            with self.subTest(out_path=out_path):
+                with self.assertRaises(TypeError):
+                    Converter(out_format=out_format, out_path=out_path)
+    
+        
     def test_init_converter_wrong_out_format(self):
         """
         GIVEN an out_format invalid parameter
@@ -29,6 +44,8 @@ class TestConverter(tf.test.TestCase):
             with self.subTest(out_format=out_format):
                 with self.assertRaises(TypeError):
                     c = Converter(out_format=out_format)
+
+    
 
     def test_init_convert_wrong_type_onnx(self):
         """
@@ -157,6 +174,32 @@ class TestConverter(tf.test.TestCase):
         converter.convert()
 
         self.assertTrue(os.path.exists(converter.out_path))
+
+    def test_convert_onnx_wrong_name_model(self):
+        """
+        GIVEN a Converter correctly initialized with onnx out_format
+        WHEN the convert method is called with a out_name not ending with .onnx
+        THEN the model should anyways save the model with the correct extension
+        """ 
+        out_format = 'onnx'
+        converter = Converter(out_path = 'model', out_format=out_format, model=self.boring_model)
+        converter.convert()
+        self.assertEqual(converter.out_path, 'model.onnx')
+
+    def test_convert_tflite_wrong_name_model(self):
+        """
+        GIVEN a Converter correctly initialized with tflite out_format
+        WHEN the convert method is called with a out_name not ending with .tflite
+        THEN the model should anyways save the model with the correct extension
+        """ 
+        out_format = 'tflite'
+        converter = Converter(out_path = 'model', out_format=out_format, model=self.boring_model)
+        converter.convert()
+        self.assertEqual(converter.out_path, 'model.tflite')
+        
+
+    
+        
 
 
     

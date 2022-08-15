@@ -581,9 +581,6 @@ class Trainer:
 
     def summary_model(self):
         """Summary of the model"""
-
-        if self.model is None:
-            raise ValueError("Model not found. Please initialize the Trainer first")
         self.model.summary()
 
     def __post_init__(self):
@@ -591,6 +588,15 @@ class Trainer:
 
         if not isinstance(self.model, tf.keras.models.Model):
             raise TypeError("model must be keras model")
+
+        if not (isinstance(self.train_dataset, tuple) or isinstance(
+            self.train_dataset, tf.data.Dataset
+        )):
+            raise TypeError("train_dataset must be a tuple or a tf.data.Dataset")
+        if not (isinstance(self.val_dataset, tuple) or isinstance(
+            self.val_dataset, tf.data.Dataset
+        ) or self.val_dataset is None):
+            raise TypeError("val_dataset must be a tuple or a tf.data.Dataset")
         if isinstance(self.train_dataset, tuple):
             if len(self.train_dataset) < 2 or len(self.train_dataset) > 3:
                 raise ValueError(
@@ -599,6 +605,7 @@ class Trainer:
             for val in self.train_dataset:
                 if not isinstance(val, np.ndarray):
                     raise TypeError("train_dataset must be a tuple of numpy arrays")
+
         if isinstance(self.val_dataset, tuple):
             if len(self.val_dataset) < 2 or len(self.val_dataset) > 3:
                 raise ValueError(

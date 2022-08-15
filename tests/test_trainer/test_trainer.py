@@ -59,6 +59,8 @@ class TestTrainer(unittest.TestCase):
         val_dataset=dev_dataset,
     )
 
+
+
     def test_create_new_trainer(self):
         """
         GIVEN a Trainer initialized with valid config params, model, and train/dev dataset
@@ -160,6 +162,134 @@ class TestTrainer(unittest.TestCase):
             with self.subTest(msg=opset):
                 with self.assertRaises(TypeError):
                     trainer.convert_model(opset_onnx = opset)
+
+    
+
+
+    def test_init_wrong_model_format(self):
+        """GIVEN a wrong format model
+        WHEN Trainer is initialized
+        THEN an error is raised
+        """
+
+        model_list = [2,'random_string', (1,2), [1,2]]
+
+        for model in model_list:
+            with self.subTest(msg=model):
+                with self.assertRaises(Exception):
+                    Trainer(
+                        self.simple_config,
+                        model,
+                        train_dataset=self.train_dataset,
+                        val_dataset=self.dev_dataset,
+                    )
+
+    def test_init_long_tuple_train_dataset(self):
+        """GIVEN a train dataset with more than 3 elements
+        WHEN Trainer is initialized
+        THEN an error is raised
+        """
+
+        train_dataset = tf.data.Dataset.from_tensor_slices((range(10), range(10), range(10), range(10))).batch(1)
+
+        with self.assertRaises(Exception):
+            Trainer(
+                self.simple_config,
+                self.simple_model,
+                train_dataset=train_dataset,
+                val_dataset=self.dev_dataset,
+            )
+        
+    
+    def test_init_list_train_dataset(self):
+        """GIVEN a train dataset with a list
+        WHEN Trainer is initialized
+        THEN an error is raised
+        """
+
+        train_dataset = [range(10), range(10)]
+
+        with self.assertRaises(Exception):
+            Trainer(
+                self.simple_config,
+                self.simple_model,
+                train_dataset=train_dataset,
+                val_dataset=self.dev_dataset,
+            )
+    def test_init_list_dev_dataset(self):
+        """GIVEN a dev dataset with a list
+        WHEN Trainer is initialized
+        THEN an error is raised
+        """
+
+        dev_dataset = 'string'
+
+        
+        with self.assertRaises(TypeError):
+            Trainer(
+                self.simple_config,
+                self.simple_model,
+                train_dataset=self.train_dataset,
+                val_dataset=dev_dataset,
+            )
+
+    def test_init_wrong_strategy_format(self):
+        """GIVEN a wrong format strategy
+        WHEN Trainer is initialized
+        THEN an error is raised
+        """
+
+        strategy_list = [2,'random_string', (1,2), [1,2]]
+
+        for strategy in strategy_list:
+            with self.subTest(msg=strategy):
+                with self.assertRaises(Exception):
+                    Trainer(
+                        self.simple_config,
+                        self.simple_model,
+                        train_dataset=self.train_dataset,
+                        val_dataset=self.dev_dataset,
+                        strategy=strategy
+                    )
+            
+    def test_init_validate_yaml_wrong_format(self):
+        """GIVEN a wrong format yaml file
+        WHEN Trainer is initialized
+        THEN an error is raised
+        """
+
+        validate_yaml_list = [2,'random_string', (1,2), [1,2]]
+
+        for yaml in validate_yaml_list:
+            with self.subTest(msg=yaml):
+                with self.assertRaises(Exception):
+                    Trainer(
+                        self.simple_config,
+                        self.simple_model,
+                        train_dataset=self.train_dataset,
+                        val_dataset=self.dev_dataset,
+                        validate_yaml=yaml
+                    )
+    def test_init_random_seed_wrong_format(self):
+        """GIVEN a wrong format random seed
+        WHEN Trainer is initialized
+        THEN an error is raised
+        """
+
+        random_seed_list = ['random_string', (1,2), [1,2]]
+
+        for random_seed in random_seed_list:
+            with self.subTest(msg=random_seed):
+                with self.assertRaises(Exception):
+                    Trainer(
+                        self.simple_config,
+                        self.simple_model,
+                        train_dataset=self.train_dataset,
+                        val_dataset=self.dev_dataset,
+                        random_seed=random_seed
+                    )
+
+    
 
     def test_convert_model_wrong_output_path(self):
         """GIVEN a wrong output path
