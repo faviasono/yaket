@@ -581,9 +581,6 @@ class Trainer:
 
     def summary_model(self):
         """Summary of the model"""
-
-        if self.model is None:
-            raise ValueError("Model not found. Please initialize the Trainer first")
         self.model.summary()
 
     def __post_init__(self):
