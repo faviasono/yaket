@@ -1,16 +1,34 @@
-# You can override the included template(s) by including variable overrides
-# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
-# Secret Detection customization: https://docs.gitlab.com/ee/user/application_security/secret_detection/#customizing-settings
-# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
-# Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
-# Note that environment variables can be set in several places
-# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 stages:
 - test
-- static code
 
-sast:
+unit_trainer:
+  stage: test 
+  image: tensorflow/tensorflow:2.9.1
+  script:
+    - pip install pytest
+    - pip install -e . 
+    - pytest tests --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+
+
+coverage test:
   stage: test
-include:
-- template: Security/SAST.gitlab-ci.yml
+  image: tensorflow/tensorflow:2.9.1
+  script:
+    - pip install pytest pytest-cov
+    - pip install -e .
+    - coverage run --omit=/usr/* -m pytest tests
+    - coverage report -i
+    - coverage xml -i
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
+    
+        

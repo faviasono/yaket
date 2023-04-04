@@ -1,6 +1,6 @@
 autolog: False
 optimizer: 
-  - Adam
+  - SGD
   - PiecewiseConstantDecay: 
       boundaries: [200, 300, 400]
       values:  [0.003, 0.0003,0.00003,0.000003]

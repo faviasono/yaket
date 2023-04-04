@@ -1,0 +1,32 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  unit_trainer:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest
+          pip install -e .
+      - name: Run unit tests
+        run: |
+          pytest tests --junitxml=report.xml
+      - name: Upload test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: junit-report
+          path: report.xml

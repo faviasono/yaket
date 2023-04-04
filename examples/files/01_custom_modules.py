@@ -14,6 +14,7 @@ num_to_char = keras.layers.StringLookup(
     vocabulary=char_to_num.get_vocabulary(), oov_token="", invert=True
 )
 
+
 def decode_batch_predictions(pred):
     input_len = np.ones(pred.shape[0]) * pred.shape[1]
     # Use greedy search. For complex tasks, you can use beam search
@@ -55,6 +56,7 @@ class CallbackEval(keras.callbacks.Callback):
             print(f"Target    : {targets[i]}")
             print(f"Prediction: {predictions[i]}")
             print("-" * 100)
+
 
 def CTCLoss(y_true, y_pred):
     # Compute the training-time loss value
